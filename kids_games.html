@@ -1,0 +1,1136 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Kids' Bubble Adventure Games</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bubblegum+Sans&display=swap" rel="stylesheet">
+    <style>
+       body {
+    font-family: 'Bubblegum Sans', cursive, sans-serif;
+    background: url('bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    overflow-x: hidden;
+    touch-action: manipulation;
+}
+
+        h1 {
+            color: #26c6da;
+            font-size: 12vw;
+            text-shadow: 0.2vw 0.2vw #fff, 0.4vw 0.4vw #ffca28;
+            margin: 5vw 0;
+            animation: bounce 2s infinite;
+        }
+        h2 {
+            color: #0d9400;
+            font-size: 8vw;
+            text-shadow: 0.1vw 0.1vw #fff;
+        }
+        #menu-container, #game-container {
+            width: 95%;
+            max-width: 600px;
+            padding: 5vw;
+            text-align: center;
+        }
+		#home-button {
+    display: inline-block;
+    padding: 10px 20px;
+    margin-top: 10px;
+    background: linear-gradient(145deg, #ff6f61, #e53935);
+    color: white;
+    font-size: 4vw;
+    border-radius: 5vw;
+    text-decoration: none;
+    border: 0.3vw solid #fff;
+    box-shadow: 0.3vw 0.3vw 0.8vw rgba(0,0,0,0.3);
+}
+#home-button:hover {
+    transform: scale(1.05);
+}
+
+        #game-menu {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(35%, 1fr));
+            gap: 4vw;
+        }
+        .game-button {
+            width: 20vw;
+            height: 20vw;
+            border-radius: 50%;
+            color: white;
+            font-size: 5.5vw;
+            border: 0.4vw solid #fff;
+            cursor: pointer;
+            box-shadow: 0.5vw 0.5vw 1vw rgba(0, 0, 0, 0.3), inset 0.2vw 0.2vw 0.5vw rgba(255, 255, 255, 0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            animation: sway 4s infinite ease-in-out;
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+        .game-button:nth-child(1) { background: linear-gradient(145deg, #ff6f61, #e53935); }
+        .game-button:nth-child(2) { background: linear-gradient(145deg, #6bd4a5, #4caf50); }
+        .game-button:nth-child(3) { background: linear-gradient(145deg, #4fc3f7, #0288d1); }
+        .game-button:nth-child(4) { background: linear-gradient(145deg, #ab47bc, #8e24aa); }
+        .game-button:nth-child(5) { background: linear-gradient(145deg, #ffca28, #ffb300); }
+        .game-button:hover, .game-button:active {
+            transform: scale(1.15);
+            box-shadow: 0.7vw 0.7vw 1.5vw rgba(0, 0, 0, 0.4), inset 0.3vw 0.3vw 0.7vw rgba(255, 255, 255, 0.7);
+        }
+        #game-container {
+            display: none;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 5vw;
+            box-shadow: 0 2vw 4vw rgba(0, 0, 0, 0.2);
+            padding: 5vw;
+            position: relative;
+        }
+        #back-button {
+            width: 25vw;
+            height: 25vw;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #e91e63, #c2185b);
+            color: white;
+            font-size: 4.5vw;
+            border: 0.4vw solid #fff;
+            cursor: pointer;
+            box-shadow: 0.5vw 0.5vw 1vw rgba(0, 0, 0, 0.3);
+            animation: sway 4s infinite ease-in-out;
+        }
+        .game-section {
+            display: none;
+        }
+        .display-text {
+            font-size: 8vw;
+            margin: 5vw 0;
+            padding: 4vw;
+            background: linear-gradient(145deg, #fffde7, #fff9c4);
+            border-radius: 4vw;
+            color: #ec407a;
+            box-shadow: 0.3vw 0.3vw 1vw rgba(0, 0, 0, 0.2);
+        }
+        .option-button {
+            width: 28vw;
+            height: 28vw;
+            border-radius: 50%;
+            margin: 2vw;
+            border: 0.4vw solid #fff;
+            cursor: pointer;
+            transition: transform 0.3s, box-shadow 0.3s;
+            font-size: 6vw;
+            background: linear-gradient(145deg, #ff8f00, #f57c00);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.3), inset 0.2vw 0.2vw 0.5vw rgba(255, 255, 255, 0.5);
+            animation: sway 4s infinite ease-in-out;
+        }
+        #color-buttons .option-button {
+            background: none;
+            background-color: inherit;
+        }
+        .option-button:nth-child(1) { background: linear-gradient(145deg, #ff6f61, #e53935); }
+        .option-button:nth-child(2) { background: linear-gradient(145deg, #6bd4a5, #4caf50); }
+        .option-button:nth-child(3) { background: linear-gradient(145deg, #4fc3f7, #0288d1); }
+        .option-button:nth-child(4) { background: linear-gradient(145deg, #ab47bc, #8e24aa); }
+        .option-button:nth-child(5) { background: linear-gradient(145deg, #ffca28, #ffb300); }
+        .option-button:hover, .option-button:active {
+            transform: scale(1.1);
+            box-shadow: 0.5vw 0.5vw 1vw rgba(0, 0, 0, 0.4), inset 0.3vw 0.3vw 0.7vw rgba(255, 255, 255, 0.7);
+        }
+        .options-container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 3vw;
+        }
+        .score {
+            font-size: 7vw;
+            margin: 4vw 0;
+            color: #0288d1;
+        }
+        .message {
+            font-size: 7vw;
+            margin: 4vw 0;
+            transition: color 0.5s;
+        }
+        .message.correct {
+            color: #4caf50;
+            animation: pulse 0.5s;
+        }
+        .message.incorrect {
+            color: #f44336;
+            animation: shake 0.5s;
+        }
+        .memory-word {
+            display: flex;
+            gap: 2vw;
+            justify-content: center;
+            margin: 4vw 0;
+        }
+        .memory-letter {
+            width: 20vw;
+            height: 20vw;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ffca28, #ffb300);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 7vw;
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.3);
+            animation: bounce-in 0.5s;
+        }
+        .bubble {
+            width: 22vw;
+            height: 22vw;
+            border-radius: 50%;
+            background: linear-gradient(145deg, #ff6f61, #ff3d00);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 5vw;
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.3);
+            animation: sway 4s infinite ease-in-out;
+            margin: 1vw;
+        }
+        .bubble-container {
+            display: flex;
+            justify-content: center;
+            gap: 2vw;
+            margin-bottom: 4vw;
+        }
+        .particle-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.9;
+            animation: sparkle-burst 1.2s ease-out forwards;
+        }
+        .pop-effect {
+            animation: pop 0.6s ease-out forwards;
+        }
+        .puzzle-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            width: 90vw;
+            max-width: 300px;
+            margin: 4vw auto;
+            border: 0.4vw solid #26c6da;
+            border-radius: 2vw;
+            background: linear-gradient(145deg, #e3f2fd, #bbdefb);
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.2);
+            position: relative;
+            touch-action: none;
+        }
+        .puzzle-tile {
+            width: 30vw;
+            height: 30vw;
+            max-width: 100px;
+            max-height: 100px;
+            background-size: 300% 300%;
+            border: 0.2vw solid #fff;
+            cursor: pointer;
+            transition: transform 0.3s;
+            animation: bounce-in 0.5s;
+            touch-action: none;
+            position: relative;
+        }
+        .puzzle-tile:hover {
+            transform: scale(1.05);
+        }
+        .puzzle-tile.empty {
+            background: #fff;
+            cursor: default;
+        }
+        .puzzle-image-preview {
+            width: 50vw;
+            max-width: 150px;
+            margin: 2vw auto;
+            border-radius: 2vw;
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.2);
+        }
+        .reset-button {
+            width: 35vw;
+            height: 14vw;
+            border-radius: 5vw;
+            background: linear-gradient(145deg, #ffca28, #ffb300);
+            color: white;
+            font-size: 7vw;
+            border: 0.4vw solid #fff;
+            cursor: pointer;
+            box-shadow: 0.3vw 0.3vw 0.8vw rgba(0, 0, 0, 0.3);
+            margin-top: 3vw;
+            animation: sway 4s infinite ease-in-out;
+        }
+        .reset-button:hover {
+            transform: scale(1.1);
+        }
+        .draggable {
+            position: relative;
+            cursor: move;
+            touch-action: none;
+        }
+        @keyframes sparkle-burst {
+            0% { transform: scale(1) translate(0, 0); opacity: 0.9; }
+            100% { transform: scale(0.5) translate(var(--x), var(--y)); opacity: 0; }
+        }
+        @keyframes pop {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.4); }
+            100% { transform: scale(0); opacity: 0; }
+        }
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2vw); }
+        }
+        @keyframes sway {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            25% { transform: translate(1vw, -2vw) rotate(2deg); }
+            50% { transform: translate(0, -3vw) rotate(0deg); }
+            75% { transform: translate(-1vw, -2vw) rotate(-2deg); }
+        }
+        @keyframes bounce-in {
+            0% { transform: scale(0); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-1vw); }
+            40%, 80% { transform: translateX(1vw); }
+        }
+        @media (max-width: 600px) {
+            h1 { font-size: 14vw; }
+            h2 { font-size: 9vw; }
+            .game-button { font-size: 6vw; width: 48vw; height: 48vw; }
+            .option-button { width: 32vw; height: 32vw; font-size: 7vw; }
+            .display-text { font-size: 9vw; }
+            .particle { width: 4vw; height: 4vw; }
+            .memory-letter { width: 24vw; height: 24vw; font-size: 8vw; }
+            #back-button { width: 28vw; height: 28vw; font-size: 5vw; }
+            .score, .message { font-size: 8vw; }
+            .bubble { width: 26vw; height: 26vw; font-size: 6vw; }
+            .puzzle-container { width: 90vw; }
+            .puzzle-tile { width: 30vw; height: 30vw; }
+            .puzzle-image-preview { width: 50vw; }
+            .reset-button { width: 35vw; height: 14vw; font-size: 7vw; }
+        }
+    </style>
+</head>
+<body>
+    <div id="menu-container">
+	<a href="index.html" id="home-button">🏠 Back</a>
+        <h2>Kids' Bubble Adventure!</h2>
+        <div id="game-menu"></div>
+    </div>
+    <div id="game-container">
+        <button id="back-button" data-sound="click.wav">Back to Menu</button>
+        <div id="color-game" class="game-section">
+            <h2>Color Matching Game</h2>
+            <div id="color-display" class="display-text"></div>
+            <div id="color-buttons" class="options-container"></div>
+            <div id="color-score" class="score">Score: 0</div>
+            <div id="color-message" class="message"></div>
+            <div id="color-particles" class="particle-container"></div>
+        </div>
+        <div id="gk-game" class="game-section">
+            <h2>सामान्य ज्ञान क्विज़ / General Knowledge Quiz</h2>
+            <div id="gk-question" class="display-text"></div>
+            <div id="gk-buttons" class="options-container"></div>
+            <div id="gk-score" class="score">Score: 0</div>
+            <div id="gk-message" class="message"></div>
+            <div id="gk-particles" class="particle-container"></div>
+        </div>
+        <div id="memory-game" class="game-section">
+            <h2>Memory Card Game</h2>
+            <div id="memory-word" class="memory-word"></div>
+            <div id="memory-buttons" class="options-container"></div>
+            <div id="memory-score" class="score">Score: 0</div>
+            <div id="memory-message" class="message"></div>
+            <div id="memory-particles" class="particle-container"></div>
+        </div>
+        <div id="counting-game" class="game-section">
+            <h2>Counting Game</h2>
+            <div id="bubble-container" class="bubble-container"></div>
+            <div id="counting-question" class="display-text"></div>
+            <div id="counting-buttons" class="options-container"></div>
+            <div id="counting-score" class="score">Score: 0</div>
+            <div id="counting-message" class="message"></div>
+            <div id="counting-particles" class="particle-container"></div>
+        </div>
+        <div id="puzzle-game" class="game-section">
+            <h2>Simple Puzzle Game</h2>
+            <img id="puzzle-image-preview" class="puzzle-image-preview" src="1.jpg" alt="Puzzle Preview">
+            <div id="puzzle-container" class="puzzle-container"></div>
+            <button id="reset-puzzle" class="reset-button" data-sound="click.wav">Reset Puzzle</button>
+            <div id="puzzle-score" class="score">Moves: 0</div>
+            <div id="puzzle-message" class="message"></div>
+            <div id="puzzle-particles" class="particle-container"></div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+
+        const gamesData = {
+            "games": [
+                { "name": "Color Matching Game", "id": "color-game" },
+                { "name": "सामान्य ज्ञान क्विज़", "id": "gk-game" },
+                { "name": "Memory Card Game", "id": "memory-game" },
+                { "name": "Counting Game", "id": "counting-game" },
+                { "name": "Simple Puzzle Game", "id": "puzzle-game" }
+            ]
+        };
+
+        const colorsData = {
+            "colors": [
+                { "name": "Red", "hex": "#ff6f61", "question": "Which is Red?", "hindi_question": "लाल कौन सा है?" },
+                { "name": "Blue", "hex": "#4fc3f7", "question": "Find the Blue!", "hindi_question": "नीला ढूंढो!" },
+                { "name": "Green", "hex": "#6bd4a5", "question": "Where's Green?", "hindi_question": "हरा कहाँ है?" },
+                { "name": "Yellow", "hex": "#ffca28", "question": "Pick Yellow!", "hindi_question": "पीला चुनो!" },
+                { "name": "Purple", "hex": "#ab47bc", "question": "Spot the Purple!", "hindi_question": "बैंगनी ढूंढो!" },
+                { "name": "Orange", "hex": "#ff8f00", "question": "Choose Orange!", "hindi_question": "नारंगी चुनो!" }
+            ]
+        };
+
+        const gkData = {
+            "questions": [
+                {
+                    "question": "भारत की राजधानी क्या है?",
+                    "english_question": "What is the capital of India?",
+                    "answer": "नई दिल्ली / New Delhi",
+                    "options": [
+                        "मुंबई / Mumbai",
+                        "नई दिल्ली / New Delhi",
+                        "कोलकाता / Kolkata",
+                        "चेन्नई / Chennai"
+                    ]
+                },
+                {
+                    "question": "जंगल का राजा कौन है?",
+                    "english_question": "Who is the king of the jungle?",
+                    "answer": "शेर / Lion",
+                    "options": [
+                        "बाघ / Tiger",
+                        "हाथी / Elephant",
+                        "शेर / Lion",
+                        "जिराफ / Giraffe"
+                    ]
+                },
+                {
+                    "question": "साफ दिन में आकाश का रंग क्या होता है?",
+                    "english_question": "What is the color of the sky on a clear day?",
+                    "answer": "नीला / Blue",
+                    "options": [
+                        "हरा / Green",
+                        "नीला / Blue",
+                        "लाल / Red",
+                        "पीला / Yellow"
+                    ]
+                },
+                {
+                    "question": "एक सप्ताह में कितने दिन होते हैं?",
+                    "english_question": "How many days are there in a week?",
+                    "answer": "सात / Seven",
+                    "options": [
+                        "पांच / Five",
+                        "छह / Six",
+                        "सात / Seven",
+                        "आठ / Eight"
+                    ]
+                }
+            ]
+        };
+
+        const wordsData = {
+            "words": [
+                { "word": "CAT", "lang": "English" },
+                { "word": "DOG", "lang": "English" },
+                { "word": "FISH", "lang": "English" },
+                { "word": "BIRD", "lang": "English" },
+                { "word": "HOUSE", "lang": "English" },
+                { "word": "TRAIN", "lang": "English" }
+            ]
+        };
+
+        const countingData = {
+            "sequences": [
+                ...Array.from({ length: 96 }, (_, i) => {
+                    const start = Math.floor(Math.random() * (100 - 4)) + 1;
+                    return {
+                        "type": "Number",
+                        "sequence": [`${start}`, `${start + 1}`, `${start + 2}`, `${start + 3}`],
+                        "next": `${start + 4}`,
+                        "options": [`${start + 4}`, `${start + 2}`, `${start + 5}`, `${start + 3}`]
+                    };
+                }),
+                ...Array.from({ length: 22 }, (_, i) => {
+                    const start = Math.floor(Math.random() * (26 - 4));
+                    return {
+                        "type": "Uppercase",
+                        "sequence": [
+                            String.fromCharCode(65 + start),
+                            String.fromCharCode(66 + start),
+                            String.fromCharCode(67 + start),
+                            String.fromCharCode(68 + start)
+                        ],
+                        "next": String.fromCharCode(69 + start),
+                        "options": [
+                            String.fromCharCode(69 + start),
+                            String.fromCharCode(67 + start),
+                            String.fromCharCode(70 + start),
+                            String.fromCharCode(68 + start)
+                        ]
+                    };
+                }),
+                ...Array.from({ length: 22 }, (_, i) => {
+                    const start = Math.floor(Math.random() * (26 - 4));
+                    return {
+                        "type": "Lowercase",
+                        "sequence": [
+                            String.fromCharCode(97 + start),
+                            String.fromCharCode(98 + start),
+                            String.fromCharCode(99 + start),
+                            String.fromCharCode(100 + start)
+                        ],
+                        "next": String.fromCharCode(101 + start),
+                        "options": [
+                            String.fromCharCode(101 + start),
+                            String.fromCharCode(99 + start),
+                            String.fromCharCode(102 + start),
+                            String.fromCharCode(100 + start)
+                        ]
+                    };
+                }),
+                ...[
+                    {
+                        "type": "Vowels Uppercase",
+                        "sequence": ["A", "E", "I", "O"],
+                        "next": "U",
+                        "options": ["U", "I", "A", "O"]
+                    },
+                    {
+                        "type": "Vowels Lowercase",
+                        "sequence": ["a", "e", "i", "o"],
+                        "next": "u",
+                        "options": ["u", "i", "a", "o"]
+                    }
+                ]
+            ]
+        };
+
+        const puzzleImages = [
+            '1.jpg',
+            '2.jpg',
+            '3.jpg',
+            '4.jpg',
+            '5.jpg',
+            '6.jpg',
+            '7.jpg',
+            '8.jpg'
+        ];
+
+        const menuContainer = document.getElementById('menu-container');
+        const gameContainer = document.getElementById('game-container');
+        const gameMenu = document.getElementById('game-menu');
+        const backButton = document.getElementById('back-button');
+
+        function showMenu() {
+            menuContainer.style.display = 'block';
+            gameContainer.style.display = 'none';
+            document.querySelectorAll('.game-section').forEach(div => div.style.display = 'none');
+        }
+
+        function showGame(gameId) {
+            menuContainer.style.display = 'none';
+            gameContainer.style.display = 'block';
+            document.querySelectorAll('.game-section').forEach(div => div.style.display = 'none');
+            document.getElementById(gameId).style.display = 'block';
+            if (gameId === 'color-game') startColorGame();
+            else if (gameId === 'gk-game') startGKGame();
+            else if (gameId === 'memory-game') startMemoryGame();
+            else if (gameId === 'counting-game') startCountingGame();
+            else if (gameId === 'puzzle-game') startPuzzleGame();
+        }
+
+        function loadGames() {
+            gamesData.games.forEach(game => {
+                const button = document.createElement('button');
+                button.className = 'game-button';
+                button.textContent = game.name;
+                button.dataset.sound = 'click.wav';
+                button.ontouchstart = button.onclick = () => showGame(game.id);
+                gameMenu.appendChild(button);
+            });
+        }
+
+        function shuffle(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+            return array;
+        }
+
+        function createParticles(particleContainerId) {
+            const particleContainer = document.getElementById(particleContainerId);
+            particleContainer.innerHTML = '';
+            const colors = ['#ff6f61', '#6bd4a5', '#4fc3f7', '#ffca28', '#ab47bc', '#ff8f00'];
+            for (let i = 0; i < 30; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+                particle.style.left = '50%';
+                particle.style.top = '50%';
+                particle.style.width = `${Math.random() * 2 + 2}vw`;
+                particle.style.height = particle.style.width;
+                const angle = Math.random() * 360;
+                const distance = Math.random() * 25 + 15;
+                particle.style.setProperty('--x', `${Math.cos(angle) * distance}vw`);
+                particle.style.setProperty('--y', `${Math.sin(angle) * distance}vw`);
+                particleContainer.appendChild(particle);
+            }
+        }
+
+        function makeDraggable(element, callback) {
+            let offsetX, offsetY, isDragging = false;
+            let originalX, originalY;
+            element.draggable = true;
+
+            element.ontouchstart = e => {
+                e.preventDefault();
+                if (!isDragging) {
+                    const touch = e.touches[0];
+                    const rect = element.getBoundingClientRect();
+                    const puzzleContainer = element.closest('.puzzle-container');
+                    const containerRect = puzzleContainer.getBoundingClientRect();
+                    offsetX = touch.clientX - rect.left;
+                    offsetY = touch.clientY - rect.top;
+                    originalX = rect.left - containerRect.left;
+                    originalY = rect.top - containerRect.top;
+                    isDragging = true;
+                    element.style.position = 'absolute';
+                    element.style.zIndex = 1000;
+                    element.style.left = `${originalX}px`;
+                    element.style.top = `${originalY}px`;
+                    moveElement(touch.clientX, touch.clientY, containerRect);
+                }
+            };
+
+            element.ontouchmove = e => {
+                if (isDragging) {
+                    e.preventDefault();
+                    const touch = e.touches[0];
+                    const puzzleContainer = element.closest('.puzzle-container');
+                    const containerRect = puzzleContainer.getBoundingClientRect();
+                    moveElement(touch.clientX, touch.clientY, containerRect);
+                }
+            };
+
+            element.ontouchend = e => {
+                if (isDragging) {
+                    isDragging = false;
+                    const puzzleContainer = element.closest('.puzzle-container');
+                    const containerRect = puzzleContainer.getBoundingClientRect();
+                    const emptyTile = puzzleContainer.querySelector('.puzzle-tile.empty');
+                    if (emptyTile) {
+                        const rect = emptyTile.getBoundingClientRect();
+                        const x = parseInt(element.style.left) + element.offsetWidth / 2;
+                        const y = parseInt(element.style.top) + element.offsetHeight / 2;
+                        if (x + containerRect.left > rect.left && x + containerRect.left < rect.right &&
+                            y + containerRect.top > rect.top && y + containerRect.top < rect.bottom) {
+                            callback(element.dataset.tile, element);
+                        }
+                    }
+                    element.style.position = '';
+                    element.style.zIndex = '';
+                    element.style.left = '';
+                    element.style.top = '';
+                }
+            };
+
+            element.ondragstart = e => {
+                const rect = element.getBoundingClientRect();
+                const puzzleContainer = element.closest('.puzzle-container');
+                const containerRect = puzzleContainer.getBoundingClientRect();
+                offsetX = e.clientX - rect.left;
+                offsetY = e.clientY - rect.top;
+                originalX = rect.left - containerRect.left;
+                originalY = rect.top - containerRect.top;
+                element.style.position = 'absolute';
+                element.style.zIndex = 1000;
+                element.style.left = `${originalX}px`;
+                element.style.top = `${originalY}px`;
+                e.dataTransfer.setData('text', element.dataset.tile);
+            };
+
+            element.ondrag = e => {
+                if (e.clientX && e.clientY) {
+                    const puzzleContainer = element.closest('.puzzle-container');
+                    const containerRect = puzzleContainer.getBoundingClientRect();
+                    moveElement(e.clientX, e.clientY, containerRect);
+                }
+            };
+
+            element.ondragend = e => {
+                const puzzleContainer = element.closest('.puzzle-container');
+                const containerRect = puzzleContainer.getBoundingClientRect();
+                const emptyTile = puzzleContainer.querySelector('.puzzle-tile.empty');
+                if (emptyTile) {
+                    const rect = emptyTile.getBoundingClientRect();
+                    const x = e.clientX - containerRect.left;
+                    const y = e.clientY - containerRect.top;
+                    if (x + containerRect.left > rect.left && x + containerRect.left < rect.right &&
+                        y + containerRect.top > rect.top && y + containerRect.top < rect.bottom) {
+                        callback(element.dataset.tile, element);
+                    }
+                }
+                element.style.position = '';
+                element.style.zIndex = '';
+                element.style.left = '';
+                element.style.top = '';
+            };
+
+            function moveElement(x, y, containerRect) {
+                const tileWidth = element.offsetWidth;
+                const tileHeight = element.offsetHeight;
+                const containerWidth = containerRect.width;
+                const containerHeight = containerRect.height;
+                let newX = x - offsetX - containerRect.left;
+                let newY = y - offsetY - containerRect.top;
+                newX = Math.max(0, Math.min(newX, containerWidth - tileWidth));
+                newY = Math.max(0, Math.min(newY, containerHeight - tileHeight));
+                element.style.left = `${newX}px`;
+                element.style.top = `${newY}px`;
+            }
+        }
+
+        let colorScore = 0;
+        let currentColor;
+        const colorDisplay = document.getElementById('color-display');
+        const colorButtons = document.getElementById('color-buttons');
+        const colorScoreDisplay = document.getElementById('color-score');
+        const colorMessage = document.getElementById('color-message');
+
+        function startColorGame() {
+            const shuffledColors = shuffle([...colorsData.colors]);
+            currentColor = shuffledColors[0];
+            colorDisplay.innerHTML = `${currentColor.question} / ${currentColor.hindi_question}`;
+            colorButtons.innerHTML = '';
+            const positions = shuffle([0, 1, 2, 3, 4, 5]);
+            shuffledColors.forEach((color, index) => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.style.backgroundColor = color.hex;
+                button.style.order = positions[index];
+                button.dataset.sound = 'pop.wav';
+                button.ontouchstart = button.onclick = (e) => {
+                    checkColorAnswer(color.name, e.target);
+                };
+                colorButtons.appendChild(button);
+            });
+        }
+
+        function checkColorAnswer(selectedColor, button) {
+            if (selectedColor === currentColor.name) {
+                colorScore++;
+                colorMessage.textContent = 'Correct! / सही!';
+                colorMessage.className = 'message correct';
+                button.classList.add('pop-effect');
+                createParticles('color-particles');
+            } else {
+                colorMessage.textContent = 'Retry! / फिर से कोशिश करें!';
+                colorMessage.className = 'message incorrect';
+                button.dataset.sound = 'buzzer.wav';
+            }
+            colorScoreDisplay.textContent = `Score: ${colorScore}`;
+            setTimeout(() => {
+                button.classList.remove('pop-effect');
+                startColorGame();
+            }, 1200);
+        }
+
+        let gkScore = 0;
+        let currentQuestion;
+        const gkQuestion = document.getElementById('gk-question');
+        const gkButtons = document.getElementById('gk-buttons');
+        const gkScoreDisplay = document.getElementById('gk-score');
+        const gkMessage = document.getElementById('gk-message');
+
+        function startGKGame() {
+            const shuffledQuestions = shuffle([...gkData.questions]);
+            currentQuestion = shuffledQuestions[0];
+            gkQuestion.textContent = `${currentQuestion.english_question} / ${currentQuestion.question}`;
+            gkButtons.innerHTML = '';
+            gkMessage.textContent = '';
+            const shuffledOptions = shuffle([...currentQuestion.options]);
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.textContent = option;
+                button.dataset.sound = 'pop.wav';
+                button.ontouchstart = button.onclick = (e) => checkGKAnswer(option, e.target);
+                gkButtons.appendChild(button);
+            });
+        }
+
+        function checkGKAnswer(selectedOption, button) {
+            if (selectedOption === currentQuestion.answer) {
+                gkScore++;
+                gkMessage.textContent = 'सही! / Correct!';
+                gkMessage.className = 'message correct';
+                button.classList.add('pop-effect');
+                createParticles('gk-particles');
+                setTimeout(startGKGame, 1200);
+            } else {
+                gkMessage.textContent = 'फिर से कोशिश करें! / Retry!';
+                gkMessage.className = 'message incorrect';
+                button.dataset.sound = 'buzzer.wav';
+                setTimeout(() => {
+                    button.classList.remove('pop-effect');
+                    startGKGame();
+                }, 1200);
+            }
+            gkScoreDisplay.textContent = `Score: ${gkScore}`;
+        }
+
+        let memoryScore = 0;
+        let currentWord;
+        let missingLetter;
+        const memoryWord = document.getElementById('memory-word');
+        const memoryButtons = document.getElementById('memory-buttons');
+        const memoryScoreDisplay = document.getElementById('memory-score');
+        const memoryMessage = document.getElementById('memory-message');
+
+        function startMemoryGame() {
+            const shuffledWords = shuffle([...wordsData.words]);
+            currentWord = shuffledWords[0].word;
+            const letters = currentWord.split('');
+            const missingIndex = Math.floor(currentWord.length / 2);
+            missingLetter = letters[missingIndex];
+            memoryWord.innerHTML = letters.map((l, i) => i === missingIndex ? `<div class="memory-letter">?</div>` : `<div class="memory-letter">${l}</div>`).join('');
+            memoryButtons.innerHTML = '';
+            const options = shuffle([missingLetter, ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').slice(0, 4)]).slice(0, 5);
+            options.forEach(letter => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.textContent = letter;
+                button.dataset.sound = 'pop.wav';
+                button.ontouchstart = button.onclick = (e) => checkMemoryAnswer(letter, e.target);
+                memoryButtons.appendChild(button);
+            });
+        }
+
+        function checkMemoryAnswer(selectedLetter, button) {
+            if (selectedLetter === missingLetter) {
+                memoryScore++;
+                memoryMessage.textContent = 'Correct!';
+                memoryMessage.className = 'message correct';
+                button.classList.add('pop-effect');
+                createParticles('memory-particles');
+            } else {
+                memoryMessage.textContent = 'Retry!';
+                memoryMessage.className = 'message incorrect';
+                button.dataset.sound = 'buzzer.wav';
+            }
+            memoryScoreDisplay.textContent = `Score: ${memoryScore}`;
+            setTimeout(() => {
+                button.classList.remove('pop-effect');
+                startMemoryGame();
+            }, 1200);
+        }
+
+        let countingScore = 0;
+        let currentSequenceIndex = 0;
+        const bubbleContainer = document.getElementById('bubble-container');
+        const countingQuestion = document.getElementById('counting-question');
+        const countingButtons = document.getElementById('counting-buttons');
+        const countingScoreDisplay = document.getElementById('counting-score');
+        const countingMessage = document.getElementById('counting-message');
+
+        function startCountingGame() {
+            const sequences = countingData.sequences;
+            currentSequenceIndex = Math.floor(Math.random() * sequences.length);
+            const currentSequence = sequences[currentSequenceIndex];
+            bubbleContainer.innerHTML = currentSequence.sequence.map(value => `<div class="bubble">${value}</div>`).join('');
+            countingQuestion.textContent = 'Find the next!';
+            countingButtons.innerHTML = '';
+            const shuffledOptions = shuffle([...currentSequence.options]);
+            shuffledOptions.forEach(option => {
+                const button = document.createElement('button');
+                button.className = 'option-button';
+                button.textContent = option;
+                button.dataset.value = option;
+                button.dataset.sound = 'pop.wav';
+                button.ontouchstart = button.onclick = (e) => checkCountingAnswer(option, e.target);
+                countingButtons.appendChild(button);
+            });
+        }
+
+        function checkCountingAnswer(selectedValue, button) {
+            const currentSequence = countingData.sequences[currentSequenceIndex];
+            if (selectedValue === currentSequence.next) {
+                countingScore++;
+                countingMessage.textContent = 'Correct!';
+                countingMessage.className = 'message correct';
+                button.classList.add('pop-effect');
+                createParticles('counting-particles');
+                currentSequenceIndex = Math.floor(Math.random() * sequences.length);
+            } else {
+                countingMessage.textContent = 'Retry!';
+                countingMessage.className = 'message incorrect';
+                button.dataset.sound = 'buzzer.wav';
+            }
+            countingScoreDisplay.textContent = `Score: ${countingScore}`;
+            setTimeout(() => {
+                button.classList.remove('pop-effect');
+                startCountingGame();
+            }, 1200);
+        }
+
+        let puzzleScore = 0;
+        let puzzleState = [];
+        let currentImageIndex = 0;
+        const puzzleContainer = document.getElementById('puzzle-container');
+        const puzzleImagePreview = document.getElementById('puzzle-image-preview');
+        const puzzleScoreDisplay = document.getElementById('puzzle-score');
+        const puzzleMessage = document.getElementById('puzzle-message');
+        const resetButton = document.getElementById('reset-puzzle');
+
+        function startPuzzleGame() {
+            puzzleScore = 0;
+            puzzleScoreDisplay.textContent = `Moves: ${puzzleScore}`;
+            puzzleMessage.textContent = 'Tap or drag a tile to move it to the empty space!';
+            puzzleContainer.innerHTML = '';
+            const imageUrl = puzzleImages[currentImageIndex];
+            puzzleImagePreview.src = imageUrl;
+            puzzleState = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+            let shuffles = 100;
+            while (shuffles > 0) {
+                const emptyIndex = puzzleState.indexOf(8);
+                const neighbors = getValidMoves(emptyIndex);
+                const randomNeighbor = neighbors[Math.floor(Math.random() * neighbors.length)];
+                [puzzleState[emptyIndex], puzzleState[randomNeighbor]] = [puzzleState[randomNeighbor], puzzleState[emptyIndex]];
+                shuffles--;
+            }
+            if (!isSolvable(puzzleState)) {
+                [puzzleState[0], puzzleState[1]] = [puzzleState[1], puzzleState[0]];
+            }
+            renderPuzzle();
+        }
+
+        function renderPuzzle() {
+            puzzleContainer.innerHTML = '';
+            puzzleState.forEach((tile, index) => {
+                const tileElement = document.createElement('div');
+                tileElement.className = 'puzzle-tile';
+                if (tile === 8) {
+                    tileElement.classList.add('empty');
+                } else {
+                    const row = Math.floor(tile / 3);
+                    const col = tile % 3;
+                    tileElement.className += ' draggable';
+                    tileElement.style.backgroundImage = `url(${puzzleImagePreview.src})`;
+                    tileElement.style.backgroundPosition = `${-col * 100}% ${-row * 100}%`;
+                    tileElement.style.backgroundSize = '300% 300%';
+                    tileElement.dataset.index = index;
+                    tileElement.dataset.tile = tile;
+                    tileElement.ontouchstart = tileElement.onclick = () => handleTileClick(tile, tileElement);
+                    makeDraggable(tileElement, checkPuzzleDrop);
+                }
+                puzzleContainer.appendChild(tileElement);
+            });
+            puzzleContainer.ondragover = e => e.preventDefault();
+            puzzleContainer.ondrop = e => {
+                e.preventDefault();
+                const tile = e.dataTransfer.getData('text');
+                const element = document.querySelector(`[data-tile="${tile}"]`);
+                checkPuzzleDrop(tile, element);
+            };
+        }
+
+        function getValidMoves(emptyIndex) {
+            const moves = [];
+            const row = Math.floor(emptyIndex / 3);
+            const col = emptyIndex % 3;
+            if (row > 0) moves.push(emptyIndex - 3);
+            if (row < 2) moves.push(emptyIndex + 3);
+            if (col > 0) moves.push(emptyIndex - 1);
+            if (col < 2) moves.push(emptyIndex + 1);
+            return moves;
+        }
+
+        function handleTileClick(tile, element) {
+            const tileIndex = parseInt(element.dataset.index);
+            const emptyIndex = puzzleState.indexOf(8);
+            const validMoves = getValidMoves(emptyIndex);
+            if (validMoves.includes(tileIndex)) {
+                [puzzleState[emptyIndex], puzzleState[tileIndex]] = [puzzleState[tileIndex], puzzleState[emptyIndex]];
+                puzzleScore++;
+                puzzleScoreDisplay.textContent = `Moves: ${puzzleScore}`;
+                renderPuzzle();
+                element.classList.add('pop-effect');
+                element.dataset.sound = 'pop.wav';
+                setTimeout(() => element.classList.remove('pop-effect'), 600);
+                if (isPuzzleSolved()) {
+                    puzzleMessage.textContent = 'Puzzle Complete!';
+                    puzzleMessage.className = 'message correct';
+                    createParticles('puzzle-particles');
+                    currentImageIndex = (currentImageIndex + 1) % puzzleImages.length;
+                    setTimeout(startPuzzleGame, 2000);
+                }
+            } else {
+                puzzleMessage.textContent = 'Invalid Move! Try Again!';
+                puzzleMessage.className = 'message incorrect';
+                element.dataset.sound = 'buzzer.wav';
+                setTimeout(() => puzzleMessage.textContent = 'Tap or drag a tile to move it to the empty space!', 1200);
+            }
+        }
+
+        function checkPuzzleDrop(tile, element) {
+            const tileIndex = parseInt(element.dataset.index);
+            const emptyIndex = puzzleState.indexOf(8);
+            const validMoves = getValidMoves(emptyIndex);
+            if (validMoves.includes(tileIndex)) {
+                [puzzleState[emptyIndex], puzzleState[tileIndex]] = [puzzleState[tileIndex], puzzleState[emptyIndex]];
+                puzzleScore++;
+                puzzleScoreDisplay.textContent = `Moves: ${puzzleScore}`;
+                renderPuzzle();
+                element.classList.add('pop-effect');
+                element.dataset.sound = 'pop.wav';
+                setTimeout(() => element.classList.remove('pop-effect'), 600);
+                if (isPuzzleSolved()) {
+                    puzzleMessage.textContent = 'Puzzle Complete!';
+                    puzzleMessage.className = 'message correct';
+                    createParticles('puzzle-particles');
+                    currentImageIndex = (currentImageIndex + 1) % puzzleImages.length;
+                    setTimeout(startPuzzleGame, 2000);
+                }
+            } else {
+                puzzleMessage.textContent = 'Invalid Move! Try Again!';
+                puzzleMessage.className = 'message incorrect';
+                element.dataset.sound = 'buzzer.wav';
+                setTimeout(() => puzzleMessage.textContent = 'Tap or drag a tile to move it to the empty space!', 1200);
+            }
+        }
+
+        function isPuzzleSolved() {
+            return puzzleState.every((tile, index) => tile === index);
+        }
+
+        function isSolvable(state) {
+            let inversions = 0;
+            for (let i = 0; i < state.length - 1; i++) {
+                for (let j = i + 1; j < state.length; j++) {
+                    if (state[i] !== 8 && state[j] !== 8 && state[i] > state[j]) {
+                        inversions++;
+                    }
+                }
+            }
+            return inversions % 2 === 0;
+        }
+
+        resetButton.ontouchstart = resetButton.onclick = startPuzzleGame;
+
+        function lightenColor(hex) {
+            hex = hex.replace('#', '');
+            const r = parseInt(hex.substring(0, 2), 16);
+            const g = parseInt(hex.substring(2, 4), 16);
+            const b = parseInt(hex.substring(4, 6), 16);
+            return `rgb(${Math.min(r + 50, 255)}, ${Math.min(g + 50, 255)}, ${Math.min(b + 50, 255)})`;
+        }
+
+        backButton.ontouchstart = backButton.onclick = showMenu;
+        loadGames();
+    </script>
+</body>
+</html>

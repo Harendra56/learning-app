@@ -1,0 +1,1249 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Learning App</title>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Devanagari:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+   body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Comic Neue', cursive;
+  height: 100%;
+  overflow-x: hidden;
+  /* yeh line replace karo */
+  /* background: linear-gradient(135deg, #f0f4ff, #e6f3fa); */
+  background: url('bg.jpg') no-repeat center center / cover;
+  touch-action: manipulation;
+  position: relative;
+}
+
+   .screen {
+  display: none;
+  flex-direction: column;
+  height: 100vh;
+  width: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  background: transparent; /* background remove */
+  animation: fadeIn 0.5s ease-in;
+  z-index: 1;
+}
+
+    .screen.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .home-screen {
+      justify-content: center;
+      align-items: center;
+      gap: 20px;
+    }
+    .button {
+      padding: 15px 30px;
+      font-size: 20px;
+      color: #fff;
+      border: 3px solid #ffffff;
+      border-radius: 15px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 700;
+    }
+    .button:nth-child(1) { background-color: #ff6347; } /* Tomato */
+    .button:nth-child(2) { background-color: #4682b4; } /* SteelBlue */
+    .button:nth-child(3) { background-color: #32cd32; } /* LimeGreen */
+    .button:nth-child(4) { background-color: #ff69b4; } /* HotPink */
+    .button:nth-child(5) { background-color: #6a5acd; } /* SlateBlue */
+    .header .button:nth-child(1) { background-color: #ff4500; } /* OrangeRed */
+    .header .button:nth-child(2) { background-color: #20b2aa; } /* LightSeaGreen */
+    .write-screen .button:nth-child(1) { background-color: #ff4500; } /* OrangeRed */
+    .write-screen .button:nth-child(2) { background-color: #20b2aa; } /* LightSeaGreen */
+    .write-screen .button:nth-child(3) { background-color: #9932cc; } /* DarkOrchid */
+    .write-screen .button:nth-child(4) { background-color: #228b22; } /* ForestGreen */
+    .button:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    .sub-options {
+      padding: 20px;
+      flex-grow: 1;
+      overflow-y: auto;
+    }
+    .option {
+      padding: 10px;
+      margin: 10px 5px;
+      color: #fff;
+      border: 3px solid #ffffff;
+      border-radius: 15px;
+      text-align: center;
+      font-size: 32px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+      font-weight: 700;
+    }
+    #learn-options .option:nth-child(1) { background-color: #ff4500; } /* OrangeRed */
+    #learn-options .option:nth-child(2) { background-color: #20b2aa; } /* LightSeaGreen */
+    #learn-options .option:nth-child(3) { background-color: #9932cc; } /* DarkOrchid */
+    #learn-options .option:nth-child(4) { background-color: #228b22; } /* ForestGreen */
+    #learn-options .option:nth-child(5) { background-color: #ff69b4; } /* HotPink */
+    #learn-options .option:nth-child(6) { background-color: #4682b4; } /* SteelBlue */
+    #learn-options .option:nth-child(7) { background-color: #32cd32; } /* LimeGreen */
+    #learn-options .option:nth-child(8) { background-color: #6a5acd; } /* SlateBlue */
+    #hindi-options .option:nth-child(1) { background-color: #ff6347; } /* Tomato */
+    #hindi-options .option:nth-child(2) { background-color: #4682b4; } /* SteelBlue */
+    #english-options .option:nth-child(1) { background-color: #32cd32; } /* LimeGreen */
+    #english-options .option:nth-child(2) { background-color: #ff69b4; } /* HotPink */
+    #english-options .option:nth-child(3) { background-color: #6a5acd; } /* SlateBlue */
+    #math-options .option:nth-child(1) { background-color: #ff4500; } /* OrangeRed */
+    #write-options .option:nth-child(1) { background-color: #ff6347; } /* Tomato */
+    #write-options .option:nth-child(2) { background-color: #4682b4; } /* SteelBlue */
+    #write-options .option:nth-child(3) { background-color: #32cd32; } /* LimeGreen */
+    #write-options .option:nth-child(4) { background-color: #ff69b4; } /* HotPink */
+    #write-options .option:nth-child(5) { background-color: #6a5acd; } /* SlateBlue */
+    #write-options .option:nth-child(6) { background-color: #ff4500; } /* OrangeRed */
+    #game-options .option:nth-child(1) { background-color: #ff6347; } /* Tomato */
+    #game-options .option:nth-child(2) { background-color: #4682b4; } /* SteelBlue */
+    #game-options .option:nth-child(3) { background-color: #32cd32; } /* LimeGreen */
+    #game-options .option:nth-child(4) { background-color: #ff69b4; } /* HotPink */
+    #game-options .option:nth-child(5) { background-color: #6a5acd; } /* SlateBlue */
+    #game-options .option:nth-child(6) { background-color: #ff4500; } /* OrangeRed */
+    #game-options .option:nth-child(7) { background-color: #20b2aa; } /* LightSeaGreen */
+    #game-options .option:nth-child(8) { background-color: #9932cc; } /* DarkOrchid */
+    .option:hover {
+      transform: translateY(-5px);
+    }
+    .option.completed {
+      background-color: #f48fb1; /* Pink for completed */
+    }
+    .content-grid {
+      padding: 20px;
+      height: 80vh;
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      grid-template-rows: repeat(4, 1fr);
+      gap: 15px;
+      overflow-y: auto;
+    }
+    .content-item {
+      padding: 20px;
+      background: #ffffff;
+      border: 3px solid #81d4fa;
+      border-radius: 15px;
+      text-align: center;
+      font-size: 20px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, background 0.2s;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+    }
+    .content-item img {
+      max-width: 80%;
+      max-height: 60%;
+      object-fit: contain;
+      margin-bottom: 10px;
+    }
+    .content-item:hover {
+      transform: scale(1.1);
+    }
+    .content-item.completed {
+      background: linear-gradient(45deg, #f8bbd0, #f48fb1);
+      color: #333;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      padding: 15px;
+      background: linear-gradient(45deg, #4fc3f7, #29b6f6);
+      color: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .header .button {
+      font-size: 16px;
+      padding: 10px 20px;
+      border: 2px solid #ffffff;
+    }
+    .write-screen {
+      flex-direction: column;
+      padding: 10px;
+    }
+    .write-text {
+      font-size: 32px;
+      font-weight: 700;
+      text-align: center;
+      margin: 15px 0;
+      color: #0288d1;
+    }
+    .canvas-container {
+      flex-grow: 1;
+      max-height: 60%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+    canvas {
+      border: 3px solid #ffffff;
+      border-radius: 15px;
+      background-color: #fff;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      touch-action: none;
+    }
+    .controls {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 15px;
+      padding: 15px;
+      background: #e0f7fa;
+      border-radius: 15px;
+      margin: 10px;
+    }
+    .stroke-options {
+      display: flex;
+      gap: 15px;
+    }
+    .stroke-option {
+      width: 35px;
+      height: 35px;
+      border-radius: 50%;
+      border: 3px solid #ffffff;
+      background: #fff;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    .stroke-option:hover {
+      transform: scale(1.15);
+    }
+    .color-picker {
+      margin: 10px 0;
+      width: 50px;
+      height: 50px;
+      border-radius: 10px;
+      border: 3px solid #ffffff;
+    }
+    .math-operation {
+      text-align: center;
+      font-size: 18px;
+      padding: 20px;
+      background: #ffffff;
+      border: 3px solid #81d4fa;
+      border-radius: 15px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    }
+    .stick {
+      display: inline-block;
+      width: 6px;
+      height: 25px;
+      background: linear-gradient(45deg, #0288d1, #f06292);
+      margin: 0 3px;
+      border-radius: 2px;
+    }
+    .flying-text {
+      position: absolute;
+      font-family: 'Comic Neue', cursive;
+      font-size: 20px;
+      color: rgba(144, 202, 249, 0.3);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 0;
+    }
+    .image-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 100;
+    }
+    .image-overlay img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border: 3px solid #ffffff;
+      border-radius: 15px;
+    }
+    .image-overlay .close-button {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #ff4500;
+      color: #fff;
+      border: 2px solid #ffffff;
+      border-radius: 10px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      font-weight: 700;
+    }
+    .image-overlay .close-button:active {
+      transform: scale(0.95);
+    }
+    .settings-option {
+      padding: 15px;
+      margin: 10px;
+      background: linear-gradient(45deg, #c8e6c9, #a5d6a7);
+      color: #333;
+      border-radius: 15px;
+      text-align: center;
+      font-size: 18px;
+      cursor: pointer;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s;
+      font-weight: 700;
+    }
+    .settings-option:hover {
+      transform: translateY(-5px);
+    }
+    .settings-option.active {
+      background: linear-gradient(45deg, #f8bbd0, #f48fb1);
+    }
+  </style>
+</head>
+<body>
+<!-- Home Screen -->
+<div id="home-screen" class="screen home-screen active">
+  <button class="button" onclick="showScreen('learn-options')">Learn</button>
+  <button class="button" onclick="showScreen('write-options')">Write</button>
+  <button class="button" onclick="window.location.href='kids_games.html'">Play and Activity</button>
+ <button class="button" onclick="window.location.href='Games.html'">Game</button>
+  <button class="button" onclick="showScreen('settings-options')">Settings</button>
+</div>
+
+<!-- Learn Options -->
+<div id="learn-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('home-screen')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="showSubOptions('hindi-options', 'Hindi')">Hindi</div>
+    <div class="option" onclick="showSubOptions('english-options', 'English')">English</div>
+    <div class="option" onclick="showSubOptions('math-options', 'Math')">Math</div>
+    <div class="option" onclick="showContent('fruits', fruits, 'Fruits')">Fruits</div>
+    <div class="option" onclick="showContent('vegetables', vegetables, 'Vegetables')">Vegetables</div>
+    <div class="option" onclick="showContent('body-parts', bodyParts, 'Body Parts')">Body Parts</div>
+    <div class="option" onclick="showContent('days', days, 'Days')">Days</div>
+    <div class="option" onclick="showContent('months', months, 'Months')">Months</div>
+  </div>
+</div>
+
+<!-- Hindi Options -->
+<div id="hindi-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('learn-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="showContent('hindi-vowels', hindiCharacters)">Vowels</div>
+    <div class="option" onclick="window.location.href='words.html#hindi-words'">Words</div>
+  </div>
+</div>
+
+<!-- English Options -->
+<div id="english-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('learn-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="showContent('capital-alphabets', capitalAlphabets)">Capital Alphabets</div>
+    <div class="option" onclick="showContent('small-alphabets', smallAlphabets)">Small Alphabets</div>
+    <div class="option" onclick="window.location.href='words.html#english-words'">Words</div>
+  </div>
+</div>
+
+<!-- Math Options -->
+<div id="math-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('learn-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="showContent('numbers', numbers)">Numbers</div>
+  </div>
+</div>
+
+
+<!-- Game Options -->
+<div id="game-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('home-screen')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="window.location.href='game1.html'">Game 1</div>
+    <div class="option" onclick="window.location.href='game2.html'">Game 2</div>
+    <div class="option" onclick="window.location.href='game3.html'">Game 3</div>
+    <div class="option" onclick="window.location.href='game4.html'">Game 4</div>
+    <div class="option" onclick="window.location.href='game5.html'">Game 5</div>
+    <div class="option" onclick="window.location.href='game6.html'">Game 6</div>
+    <div class="option" onclick="window.location.href='game7.html'">Game 7</div>
+    <div class="option" onclick="window.location.href='game8.html'">Game 8</div>
+  </div>
+</div>
+
+<!-- Settings Options -->
+<div id="settings-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('home-screen')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="settings-option" id="text-to-speech-toggle" onclick="toggleTextToSpeech()">Text-to-Speech: ON</div>
+    <div class="settings-option" id="background-sound-toggle" onclick="toggleBackgroundSound()">Background Sound: ON</div>
+  </div>
+</div>
+
+<!-- Content Screen -->
+<div id="content-screen" class="screen">
+  <div class="header">
+    <button class="button" onclick="showPreviousScreen()">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div id="content-grid" class="content-grid"></div>
+</div>
+
+<!-- Math Operation Screen -->
+<div id="math-operation-screen" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('math-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div id="math-operation-content" class="content-grid"></div>
+</div>
+
+<!-- Write Options -->
+<div id="write-options" class="screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('home-screen')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="sub-options">
+    <div class="option" onclick="showWriteContent('hindi-characters', hindiCharacters)">Hindi Characters</div>
+    <div class="option" onclick="showWriteContent('hindi-words', hindiWords)">Hindi Words</div>
+    <div class="option" onclick="showWriteContent('capital-alphabets', capitalAlphabets)">Capital Alphabets</div>
+    <div class="option" onclick="showWriteContent('small-alphabets', smallAlphabets)">Small Alphabets</div>
+    <div class="option" onclick="showWriteContent('numbers', numbers)">Numbers</div>
+    <div class="option" onclick="showMathWrite()">Math Operations</div>
+  </div>
+</div>
+
+<!-- Write Screen -->
+<div id="write-screen" class="screen write-screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('write-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="write-text" id="write-text"></div>
+  <div class="canvas-container">
+    <canvas id="draw-canvas"></canvas>
+  </div>
+  <div class="controls">
+    <div class="stroke-options">
+      <div class="stroke-option" style="border-width: 1px;" onclick="setStrokeWidth(1)"></div>
+      <div class="stroke-option" style="border-width: 3px;" onclick="setStrokeWidth(3)"></div>
+      <div class="stroke-option" style="border-width: 5px;" onclick="setStrokeWidth(5)"></div>
+    </div>
+    <input type="color" class="color-picker" id="color-picker" onchange="setStrokeColor(this.value)">
+    <div>
+      <button class="button" onclick="clearCanvas('draw-canvas')">Clear</button>
+      <button class="button" onclick="submitDrawing()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Math Write Screen -->
+<div id="math-write-screen" class="screen write-screen">
+  <div class="header">
+    <button class="button" onclick="showScreen('write-options')">Back</button>
+    <button class="button" onclick="referFriend()">Refer to Friend</button>
+  </div>
+  <div class="write-text" id="math-write-text"></div>
+  <div class="canvas-container">
+    <canvas id="math-draw-canvas"></canvas>
+  </div>
+  <div class="controls">
+    <div class="stroke-options">
+      <div class="stroke-option" style="border-width: 1px;" onclick="setStrokeWidth(1)"></div>
+      <div class="stroke-option" style="border-width: 3px;" onclick="setStrokeWidth(3)"></div>
+      <div class="stroke-option" style="border-width: 5px;" onclick="setStrokeWidth(5)"></div>
+    </div>
+    <input type="color" class="color-picker" id="math-color-picker" onchange="setStrokeColor(this.value)">
+    <div>
+      <button class="button" onclick="clearCanvas('math-draw-canvas')">Clear</button>
+      <button class="button" onclick="submitDrawing()">Submit</button>
+    </div>
+  </div>
+</div>
+
+<!-- Image Overlay -->
+<div id="image-overlay" class="image-overlay">
+  <img id="overlay-image" src="" alt="Overlay Image">
+  <button class="close-button" onclick="closeImageOverlay()">Close</button>
+</div>
+
+<script>
+    var gk_isXlsx = false;
+    var gk_xlsxFileLookup = {};
+    var gk_fileData = {};
+    function filledCell(cell) {
+      return cell !== '' && cell != null;
+    }
+    function loadFileData(filename) {
+      if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+        try {
+          var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+          var firstSheetName = workbook.SheetNames[0];
+          var worksheet = workbook.Sheets[firstSheetName];
+          var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+          var filteredData = jsonData.filter(row => row.some(filledCell));
+          var headerRowIndex = filteredData.findIndex((row, index) =>
+            row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+          );
+          if (headerRowIndex === -1 || headerRowIndex > 25) {
+            headerRowIndex = 0;
+          }
+          var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+          csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+          return csv;
+        } catch (e) {
+          console.error(e);
+          return "";
+        }
+      }
+      return gk_fileData[filename] || "";
+    }
+
+    const hindiCharacters = [
+      { text: 'अ', image: 'image/अ.png' },
+      { text: 'आ', image: 'image/आ.png' },
+      { text: 'इ', image: 'image/इ.png' },
+      { text: 'ई', image: 'image/ई.png' },
+      { text: 'उ', image: 'image/उ.png' },
+      { text: 'ऊ', image: 'image/ऊ.png' },
+      { text: 'ऋ', image: 'image/ऋ.png' },
+      { text: 'ए', image: 'image/ए.png' },
+      { text: 'ऐ', image: 'image/ऐ.png' },
+      { text: 'ओ', image: 'image/ओ.png' },
+      { text: 'औ', image: 'image/औ.png' },
+      { text: 'अं', image: 'image/अं.png' },
+      { text: 'अः', image: 'image/अः.png' },
+      { text: 'क', image: 'image/क.png' },
+      { text: 'ख', image: 'image/ख.png' },
+      { text: 'ग', image: 'image/ग.png' },
+      { text: 'घ', image: 'image/घ.png' },
+      { text: 'ङ', image: 'image/ङ.png' },
+      { text: 'च', image: 'image/च.png' },
+      { text: 'छ', image: 'image/छ.png' },
+      { text: 'ज', image: 'image/ज.png' },
+      { text: 'झ', image: 'image/झ.png' },
+      { text: 'ञ', image: 'image/ञ.png' },
+      { text: 'ट', image: 'image/ट.png' },
+      { text: 'ठ', image: 'image/ठ.png' },
+      { text: 'ड', image: 'image/ड.png' },
+      { text: 'ढ', image: 'image/ढ.png' },
+      { text: 'ण', image: 'image/ण.png' },
+      { text: 'त', image: 'image/त.png' },
+      { text: 'थ', image: 'image/थ.png' },
+      { text: 'द', image: 'image/द.png' },
+      { text: 'ध', image: 'image/ध.png' },
+      { text: 'न', image: 'image/न.png' },
+      { text: 'प', image: 'image/प.png' },
+      { text: 'फ', image: 'image/फ.png' },
+      { text: 'ब', image: 'image/ब.png' },
+      { text: 'भ', image: 'image/भ.png' },
+      { text: 'म', image: 'image/म.png' },
+      { text: 'य', image: 'image/य.png' },
+      { text: 'र', image: 'image/र.png' },
+      { text: 'ल', image: 'image/ल.png' },
+      { text: 'व', image: 'image/व.png' },
+      { text: 'श', image: 'image/श.png' },
+      { text: 'ष', image: 'image/ष.png' },
+      { text: 'स', image: 'image/स.png' },
+      { text: 'ह', image: 'image/ह.png' },
+      { text: 'क्ष', image: 'image/क्ष.png' },
+      { text: 'त्र', image: 'image/त्र.png' },
+      { text: 'ज्ञ', image: 'image/ज्ञ.png' },
+      { text: 'श्र', image: 'image/श्र.png' }
+    ];
+    const hindiVowels = hindiCharacters; // Use all hindiCharacters for Vowels
+    const hindiWords = [
+      { text: 'आम', image: '' }, { text: 'केला', image: '' }, { text: 'अंगूर', image: '' }, { text: 'अमरूद', image: '' },
+      { text: 'सेब', image: '' }, { text: 'नारंगी', image: '' }, { text: 'पपीता', image: '' }, { text: 'तरबूज', image: '' },
+      { text: 'अनार', image: '' }, { text: 'कटहल', image: '' }, { text: 'नींबू', image: '' }, { text: 'संतरा', image: '' },
+      { text: 'खजूर', image: '' }, { text: 'लीची', image: '' }, { text: 'आड़ू', image: '' }, { text: 'चीकू', image: '' },
+      { text: 'बेर', image: '' }, { text: 'नाशपाती', image: '' }, { text: 'अंजीर', image: '' }, { text: 'जामुन', image: '' },
+      { text: 'कुत्ता', image: '' }, { text: 'बिल्ली', image: '' }, { text: 'गाय', image: '' }, { text: 'भैंस', image: '' },
+      { text: 'घोड़ा', image: '' }, { text: 'हाथी', image: '' }, { text: 'बकरी', image: '' }, { text: 'शेर', image: '' },
+      { text: 'बाघ', image: '' }, { text: 'हिरन', image: '' }, { text: 'लोमड़ी', image: '' }, { text: 'भालू', image: '' },
+      { text: 'गधा', image: '' }, { text: 'ऊँट', image: '' }, { text: 'बंदर', image: '' }, { text: 'खरगोश', image: '' },
+      { text: 'चूहा', image: '' }, { text: 'मेंढक', image: '' }, { text: 'तोता', image: '' }, { text: 'कबूतर', image: '' },
+      { text: 'नदी', image: '' }, { text: 'पहाड़', image: '' }, { text: 'पेड़', image: '' }, { text: 'फूल', image: '' },
+      { text: 'पत्ता', image: '' }, { text: 'मिट्टी', image: '' }, { text: 'बादल', image: '' }, { text: 'पानी', image: '' },
+      { text: 'आग', image: '' }, { text: 'हवा', image: '' }, { text: 'सूरज', image: '' }, { text: 'चाँद', image: '' },
+      { text: 'तारा', image: '' }, { text: 'आकाश', image: '' }, { text: 'बारिश', image: '' }, { text: 'ओस', image: '' },
+      { text: 'हिम', image: '' }, { text: 'बर्फ', image: '' }, { text: 'धूप', image: '' }, { text: 'छाया', image: '' },
+      { text: 'घर', image: '' }, { text: 'कमरा', image: '' }, { text: 'खिड़की', image: '' }, { text: 'दरवाज़ा', image: '' },
+      { text: 'बिस्तर', image: '' }, { text: 'तकिया', image: '' }, { text: 'चादर', image: '' }, { text: 'कुर्सी', image: '' },
+      { text: 'मेज़', image: '' }, { text: 'अलमारी', image: '' }, { text: 'घड़ी', image: '' }, { text: 'झूला', image: '' },
+      { text: 'कालीन', image: '' }, { text: 'पर्दा', image: '' }, { text: 'बल्ब', image: '' }, { text: 'पंखा', image: '' },
+      { text: 'टीवी', image: '' }, { text: 'फ़ोन', image: '' }, { text: 'डिब्बा', image: '' }, { text: 'बाल्टी', image: '' },
+      { text: 'किताब', image: '' }, { text: 'कॉपी', image: '' }, { text: 'पेन', image: '' }, { text: 'पेंसिल', image: '' },
+      { text: 'रबर', image: '' }, { text: 'स्केल', image: '' }, { text: 'रंग', image: '' }, { text: 'ब्रश', image: '' },
+      { text: 'बैग', image: '' }, { text: 'डेस्क', image: '' }, { text: 'चॉक', image: '' }, { text: 'बोर्ड', image: '' },
+      { text: 'घंटी', image: '' }, { text: 'शब्द', image: '' }, { text: 'चित्र', image: '' }, { text: 'अक्षर', image: '' },
+      { text: 'संख्या', image: '' }, { text: 'कहानी', image: '' }, { text: 'कविता', image: '' }, { text: 'पाठ', image: '' },
+      { text: 'मम्मी', image: '' }, { text: 'पापा', image: '' }, { text: 'भाई', image: '' }, { text: 'बहन', image: '' },
+      { text: 'दादी', image: '' }, { text: 'दादा', image: '' }, { text: 'नानी', image: '' }, { text: 'नाना', image: '' },
+      { text: 'चाचा', image: '' }, { text: 'चाची', image: '' }, { text: 'मामा', image: '' }, { text: 'मामी', image: '' },
+      { text: 'दोस्त', image: '' }, { text: 'गुरु', image: '' }, { text: 'शिक्षक', image: '' }, { text: 'पड़ोसी', image: '' },
+      { text: 'बच्चा', image: '' }, { text: 'लड़की', image: '' }, { text: 'लड़का', image: '' }, { text: 'शिशु', image: '' },
+      { text: 'चलो', image: '' }, { text: 'खाओ', image: '' }, { text: 'पियो', image: '' }, { text: 'बैठो', image: '' },
+      { text: 'उठो', image: '' }, { text: 'भागो', image: '' }, { text: 'दौड़ो', image: '' }, { text: 'नाचो', image: '' },
+      { text: 'गाओ', image: '' }, { text: 'पढ़ो', image: '' }, { text: 'लिखो', image: '' }, { text: 'देखो', image: '' },
+      { text: 'सुनो', image: '' }, { text: 'सोचो', image: '' }, { text: 'खेलो', image: '' }, { text: 'बोलो', image: '' },
+      { text: 'छूओ', image: '' }, { text: 'धोओ', image: '' }, { text: 'पोंछो', image: '' }, { text: 'लाओ', image: '' },
+      { text: 'लाल', image: '' }, { text: 'पीला', image: '' }, { text: 'नीला', image: '' }, { text: 'हरा', image: '' },
+      { text: 'काला', image: '' }, { text: 'सफेद', image: '' }, { text: 'भूरा', image: '' }, { text: 'गुलाबी', image: '' },
+      { text: 'नारंगी', image: '' }, { text: 'बैंगनी', image: '' }, { text: 'हल्का', image: '' }, { text: 'गहरा', image: '' },
+      { text: 'चिकना', image: '' }, { text: 'खुरदरा', image: '' }, { text: 'गर्म', image: '' }, { text: 'ठंडा', image: '' },
+      { text: 'बड़ा', image: '' }, { text: 'छोटा', image: '' }, { text: 'ऊँचा', image: '' }, { text: 'नीचा', image: '' },
+      { text: 'एक', image: '' }, { text: 'दो', image: '' }, { text: 'तीन', image: '' }, { text: 'चार', image: '' },
+      { text: 'पाँच', image: '' }, { text: 'छह', image: '' }, { text: 'सात', image: '' }, { text: 'आठ', image: '' },
+      { text: 'नौ', image: '' }, { text: 'दस', image: '' }, { text: 'गिनती', image: '' }, { text: 'जोड़', image: '' },
+      { text: 'घटाव', image: '' }, { text: 'गुणा', image: '' }, { text: 'भाग', image: '' }, { text: 'लंबा', image: '' },
+      { text: 'छोटा', image: '' }, { text: 'मोटा', image: '' }, { text: 'पतला', image: '' }, { text: 'तेज', image: '' },
+      { text: 'सुबह', image: '' }, { text: 'दोपहर', image: '' }, { text: 'शाम', image: '' }, { text: 'रात', image: '' },
+      { text: 'आज', image: '' }, { text: 'कल', image: '' }, { text: 'परसों', image: '' }, { text: 'रविवार', image: '' },
+      { text: 'सोमवार', image: '' }, { text: 'मंगलवार', image: '' }, { text: 'बुधवार', image: '' }, { text: 'गुरुवार', image: '' },
+      { text: 'शुक्रवार', image: '' }, { text: 'शनिवार', image: '' }, { text: 'महीना', image: '' }, { text: 'तारीख', image: '' },
+      { text: 'साल', image: '' }, { text: 'समय', image: '' }, { text: 'घंटा', image: '' }, { text: 'मिनट', image: '' }
+    ];
+    const capitalAlphabets = [
+      { text: 'A', image: 'image/A.png' }, { text: 'B', image: 'image/B.png' },
+      { text: 'C', image: 'image/C.png' }, { text: 'D', image: 'image/D.png' },
+      { text: 'E', image: 'image/E.png' }, { text: 'F', image: 'image/F.png' },
+      { text: 'G', image: 'image/G.png' }, { text: 'H', image: 'image/H.png' },
+      { text: 'I', image: 'image/I.png' }, { text: 'J', image: 'image/J.png' },
+      { text: 'K', image: 'image/K.png' }, { text: 'L', image: 'image/L.png' },
+      { text: 'M', image: 'image/M.png' }, { text: 'N', image: 'image/N.png' },
+      { text: 'O', image: 'image/O.png' }, { text: 'P', image: 'image/P.png' },
+      { text: 'Q', image: 'image/Q.png' }, { text: 'R', image: 'image/R.png' },
+      { text: 'S', image: 'image/S.png' }, { text: 'T', image: 'image/T.png' },
+      { text: 'U', image: 'image/U.png' }, { text: 'V', image: 'image/V.png' },
+      { text: 'W', image: 'image/W.png' }, { text: 'X', image: 'image/X.png' },
+      { text: 'Y', image: 'image/Y.png' }, { text: 'Z', image: 'image/Z.png' }
+    ];
+    const smallAlphabets = [
+      { text: 'a', image: 'image/sa.png' }, { text: 'b', image: 'image/sb.png' },
+      { text: 'c', image: 'image/sc.png' }, { text: 'd', image: 'image/sd.png' },
+      { text: 'e', image: 'image/se.png' }, { text: 'f', image: 'image/sf.png' },
+      { text: 'g', image: 'image/sg.png' }, { text: 'h', image: 'image/sh.png' },
+      { text: 'i', image: 'image/si.png' }, { text: 'j', image: 'image/sj.png' },
+      { text: 'k', image: 'image/sk.png' }, { text: 'l', image: 'image/sl.png' },
+      { text: 'm', image: 'image/sm.png' }, { text: 'n', image: 'image/sn.png' },
+      { text: 'o', image: 'image/so.png' }, { text: 'p', image: 'image/sp.png' },
+      { text: 'q', image: 'image/sq.png' }, { text: 'r', image: 'image/sr.png' },
+      { text: 's', image: 'image/ss.png' }, { text: 't', image: 'image/st.png' },
+      { text: 'u', image: 'image/su.png' }, { text: 'v', image: 'image/sv.png' },
+      { text: 'w', image: 'image/sw.png' }, { text: 'x', image: 'image/sx.png' },
+      { text: 'y', image: 'image/sy.png' }, { text: 'z', image: 'image/sz.png' }
+    ];
+    const numbers = [
+      { text: '1' }, { text: '2' }, { text: '3' }, { text: '4' }, { text: '5' }, { text: '6' }, { text: '7' }, { text: '8' },
+      { text: '9' }, { text: '10' }, { text: '11' }, { text: '12' }, { text: '13' }, { text: '14' }, { text: '15' }, { text: '16' },
+      { text: '17' }, { text: '18' }, { text: '19' }, { text: '20' }, { text: '21' }, { text: '22' }, { text: '23' }, { text: '24' },
+      { text: '25' }, { text: '26' }, { text: '27' }, { text: '28' }, { text: '29' }, { text: '30' }, { text: '31' }, { text: '32' },
+      { text: '33' }, { text: '34' }, { text: '35' }, { text: '36' }, { text: '37' }, { text: '38' }, { text: '39' }, { text: '40' },
+      { text: '41' }, { text: '42' }, { text: '43' }, { text: '44' }, { text: '45' }, { text: '46' }, { text: '47' }, { text: '48' },
+      { text: '49' }, { text: '50' }, { text: '51' }, { text: '52' }, { text: '53' }, { text: '54' }, { text: '55' }, { text: '56' },
+      { text: '57' }, { text: '58' }, { text: '59' }, { text: '60' }, { text: '61' }, { text: '62' }, { text: '63' }, { text: '64' },
+      { text: '65' }, { text: '66' }, { text: '67' }, { text: '68' }, { text: '69' }, { text: '70' }, { text: '71' }, { text: '72' },
+      { text: '73' }, { text: '74' }, { text: '75' }, { text: '76' }, { text: '77' }, { text: '78' }, { text: '79' }, { text: '80' },
+      { text: '81' }, { text: '82' }, { text: '83' }, { text: '84' }, { text: '85' }, { text: '86' }, { text: '87' }, { text: '88' },
+      { text: '89' }, { text: '90' }, { text: '91' }, { text: '92' }, { text: '93' }, { text: '94' }, { text: '95' }, { text: '96' },
+      { text: '97' }, { text: '98' }, { text: '99' }, { text: '100' }
+    ];
+    const fruits = [
+      { text: 'apple', image: 'image/apple.png' },
+      { text: 'banana', image: 'image/banana.png' },
+      { text: 'mango', image: 'image/mango.png' },
+      { text: 'orange', image: 'image/orange.png' },
+      { text: 'grapes', image: 'image/grapes.png' },
+      { text: 'pomegranate', image: 'image/pomegranate.png' },
+      { text: 'papaya', image: 'image/papaya.png' },
+      { text: 'watermelon', image: 'image/watermelon.png' },
+      { text: 'muskmelon', image: 'image/muskmelon.png' },
+      { text: 'guava', image: 'image/guava.png' },
+      { text: 'lychee', image: 'image/lychee.png' },
+      { text: 'pear', image: 'image/pear.png' },
+      { text: 'peach', image: 'image/peach.png' },
+      { text: 'sapodilla', image: 'image/sapodilla.png' },
+      { text: 'jamun', image: 'image/jamun.png' },
+      { text: 'fig', image: 'image/fig.png' },
+      { text: 'date', image: 'image/date.png' },
+      { text: 'jackfruit', image: 'image/jackfruit.png' },
+      { text: 'berry', image: 'image/berry.png' },
+      { text: 'lemon', image: 'image/lemon.png' }
+    ];
+    const vegetables = [
+      { text: 'potato', image: 'image/potato.png' },
+      { text: 'onion', image: 'image/onion.png' },
+      { text: 'tomato', image: 'image/tomato.png' },
+      { text: 'ladyfinger', image: 'image/ladyfinger.png' },
+      { text: 'brinjal', image: 'image/brinjal.png' },
+      { text: 'carrot', image: 'image/carrot.png' },
+      { text: 'radish', image: 'image/radish.png' },
+      { text: 'bottle gourd', image: 'image/bottlegourd.png' },
+      { text: 'ridge gourd', image: 'image/ridgegourd.png' },
+      { text: 'pumpkin', image: 'image/pumpkin.png' },
+      { text: 'capsicum', image: 'image/capsicum.png' },
+      { text: 'green chili', image: 'image/greenchili.png' },
+      { text: 'peas', image: 'image/peas.png' },
+      { text: 'spinach', image: 'image/spinach.png' },
+      { text: 'fenugreek', image: 'image/fenugreek.png' },
+      { text: 'coriander', image: 'image/coriander.png' },
+      { text: 'bitter gourd', image: 'image/bittergourd.png' },
+      { text: 'pointed gourd', image: 'image/pointedgourd.png' },
+      { text: 'cabbage', image: 'image/cabbage.png' },
+      { text: 'cauliflower', image: 'image/cauliflower.png' }
+    ];
+    const bodyParts = [
+      { text: 'head', image: 'image/head.png' },
+      { text: 'eye', image: 'image/eye.png' },
+      { text: 'nose', image: 'image/nose.png' },
+      { text: 'ear', image: 'image/ear.png' },
+      { text: 'mouth', image: 'image/mouth.png' },
+      { text: 'teeth', image: 'image/teeth.png' },
+      { text: 'tongue', image: 'image/tongue.png' },
+      { text: 'neck', image: 'image/neck.png' },
+      { text: 'shoulder', image: 'image/shoulder.png' },
+      { text: 'hand', image: 'image/hand.png' },
+      { text: 'finger', image: 'image/finger.png' },
+      { text: 'nail', image: 'image/nail.png' },
+      { text: 'chest', image: 'image/chest.png' },
+      { text: 'stomach', image: 'image/stomach.png' },
+      { text: 'back', image: 'image/back.png' },
+      { text: 'waist', image: 'image/waist.png' },
+      { text: 'knee', image: 'image/knee.png' },
+      { text: 'leg', image: 'image/leg.png' },
+      { text: 'heel', image: 'image/heel.png' },
+      { text: 'sole', image: 'image/sole.png' }
+    ];
+    const days = [
+      { text: 'Sunday', image: '' }, { text: 'Monday', image: '' }, { text: 'Tuesday', image: '' }, { text: 'Wednesday', image: '' },
+      { text: 'Thursday', image: '' }, { text: 'Friday', image: '' }, { text: 'Saturday', image: '' }
+    ];
+    const months = [
+      { text: 'January', image: '' }, { text: 'February', image: '' }, { text: 'March', image: '' }, { text: 'April', image: '' },
+      { text: 'May', image: '' }, { text: 'June', image: '' }, { text: 'July', image: '' }, { text: 'August', image: '' },
+      { text: 'September', image: '' }, { text: 'October', image: '' }, { text: 'November', image: '' }, { text: 'December', image: '' }
+    ];
+    const mathOperations = [
+      { num1: 5, op: '+', num2: 3, answer: 8 },
+      { num1: 7, op: '-', num2: 4, answer: 3 },
+      { num1: 6, op: '×', num2: 2, answer: 12 },
+      { num1: 8, op: '÷', num2: 2, answer: 4 },
+      { num1: 9, op: '+', num2: 1, answer: 10 },
+      { num1: 10, op: '-', num2: 6, answer: 4 },
+      { num1: 4, op: '×', num2: 3, answer: 12 },
+      { num1: 12, op: '÷', num2: 4, answer: 3 },
+      { num1: 2, op: '+', num2: 7, answer: 9 },
+      { num1: 15, op: '-', num2: 5, answer: 10 },
+      { num1: 3, op: '×', num2: 5, answer: 15 },
+      { num1: 16, op: '÷', num2: 4, answer: 4 },
+      { num1: 6, op: '+', num2: 6, answer: 12 },
+      { num1: 9, op: '-', num2: 2, answer: 7 },
+      { num1: 7, op: '×', num2: 3, answer: 21 },
+      { num1: 18, op: '÷', num2: 3, answer: 6 },
+      { num1: 10, op: '+', num2: 5, answer: 15 },
+      { num1: 13, op: '-', num2: 7, answer: 6 },
+      { num1: 2, op: '×', num2: 8, answer: 16 },
+      { num1: 20, op: '÷', num2: 5, answer: 4 },
+      { num1: 4, op: '+', num2: 4, answer: 8 },
+      { num1: 11, op: '-', num2: 3, answer: 8 },
+      { num1: 5, op: '×', num2: 5, answer: 25 },
+      { num1: 24, op: '÷', num2: 6, answer: 4 },
+      { num1: 6, op: '+', num2: 7, answer: 13 },
+      { num1: 17, op: '-', num2: 9, answer: 8 },
+      { num1: 3, op: '×', num2: 6, answer: 18 },
+      { num1: 30, op: '÷', num2: 5, answer: 6 },
+      { num1: 8, op: '+', num2: 5, answer: 13 },
+      { num1: 14, op: '-', num2: 6, answer: 8 },
+      { num1: 2, op: '×', num2: 9, answer: 18 },
+      { num1: 36, op: '÷', num2: 6, answer: 6 },
+      { num1: 7, op: '+', num2: 2, answer: 9 },
+      { num1: 12, op: '-', num2: 4, answer: 8 },
+      { num1: 4, op: '×', num2: 4, answer: 16 },
+      { num1: 32, op: '÷', num2: 4, answer: 8 },
+      { num1: 9, op: '+', num2: 6, answer: 15 },
+      { num1: 11, op: '-', num2: 2, answer: 9 },
+      { num1: 6, op: '×', num2: 6, answer: 36 },
+      { num1: 40, op: '÷', num2: 5, answer: 8 },
+      { num1: 3, op: '+', num2: 6, answer: 9 },
+      { num1: 13, op: '-', num2: 5, answer: 8 },
+      { num1: 7, op: '×', num2: 2, answer: 14 },
+      { num1: 48, op: '÷', num2: 6, answer: 8 },
+      { num1: 8, op: '+', num2: 4, answer: 12 },
+      { num1: 19, op: '-', num2: 9, answer: 10 },
+      { num1: 3, op: '×', num2: 7, answer: 21 },
+      { num1: 56, op: '÷', num2: 7, answer: 8 },
+      { num1: 10, op: '+', num2: 2, answer: 12 },
+      { num1: 18, op: '-', num2: 10, answer: 8 }
+    ];
+
+    let currentContent = [];
+    let currentIndex = 0;
+    let completedItems = new Set();
+    let previousScreen = 'home-screen';
+    let currentCategory = '';
+    let textToSpeechEnabled = true;
+    let backgroundSoundEnabled = true;
+    let backgroundAudio = new Audio('https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3');
+
+    function toggleTextToSpeech() {
+      textToSpeechEnabled = !textToSpeechEnabled;
+      const toggleButton = document.getElementById('text-to-speech-toggle');
+      toggleButton.textContent = `Text-to-Speech: ${textToSpeechEnabled ? 'ON' : 'OFF'}`;
+      toggleButton.classList.toggle('active', !textToSpeechEnabled);
+    }
+
+    function toggleBackgroundSound() {
+      backgroundSoundEnabled = !backgroundSoundEnabled;
+      const toggleButton = document.getElementById('background-sound-toggle');
+      toggleButton.textContent = `Background Sound: ${backgroundSoundEnabled ? 'ON' : 'OFF'}`;
+      toggleButton.classList.toggle('active', !backgroundSoundEnabled);
+      if (backgroundSoundEnabled) {
+        backgroundAudio.play();
+      } else {
+        backgroundAudio.pause();
+      }
+    }
+
+  function showScreen(screenId) {
+  document.querySelectorAll('.screen').forEach(screen => screen.classList.remove('active'));
+  document.getElementById(screenId).classList.add('active');
+  previousScreen = screenId;
+  updateFlyingText();
+
+  if (screenId === 'home-screen') {
+    document.body.style.background = "url('bg.jpg') no-repeat center center / cover";
+  } else if (screenId === 'learn-options') {
+    document.body.style.background = "url('learn-bg.jpg') no-repeat center center / cover";
+  } else if (screenId === 'write-options') {
+    document.body.style.background = "url('write-bg.jpg') no-repeat center center / cover";
+  } else {
+    document.body.style.background = "url('bg.jpg') no-repeat center center / cover";
+  }
+}
+
+    function showSubOptions(screenId, text) {
+      showScreen(screenId);
+      if (textToSpeechEnabled) {
+        speakText(text, screenId === 'hindi-options' ? 'hi-IN' : 'en-US');
+      }
+    }
+
+    function showContent(category, content, text) {
+      currentCategory = category;
+      currentContent = content;
+      currentIndex = 0;
+      showScreen('content-screen');
+      if (textToSpeechEnabled) {
+        speakText(text, category === 'hindi-vowels' ? 'hi-IN' : 'en-US');
+      }
+      renderContent();
+    }
+
+    function renderContent() {
+      const grid = document.getElementById('content-grid');
+      grid.innerHTML = '';
+      const start = currentIndex;
+      const end = Math.min(start + 8, currentContent.length);
+      const imageCategories = ['hindi-vowels', 'capital-alphabets', 'small-alphabets', 'fruits', 'vegetables', 'body-parts'];
+      for (let i = start; i < end; i++) {
+        const item = currentContent[i];
+        const div = document.createElement('div');
+        div.className = `content-item ${completedItems.has(`${currentCategory}-${i}`) ? 'completed' : ''}`;
+        if (imageCategories.includes(currentCategory) && item.image) {
+          const img = document.createElement('img');
+          img.src = item.image;
+          img.alt = item.text;
+          img.onerror = () => { img.remove(); div.textContent = item.text; };
+          div.appendChild(img);
+        }
+        div.textContent = item.text;
+        div.onclick = () => handleContentClick(i, item.text, item.image);
+        grid.appendChild(div);
+      }
+      for (let i = end - start; i < 8; i++) {
+        const div = document.createElement('div');
+        div.className = 'content-item';
+        div.style.visibility = 'hidden';
+        grid.appendChild(div);
+      }
+      updateFlyingText();
+    }
+
+    function handleContentClick(index, text, image) {
+      if (!completedItems.has(`${currentCategory}-${index}`)) {
+        completedItems.add(`${currentCategory}-${index}`);
+        const item = document.getElementsByClassName('content-item')[index % 8];
+        item.classList.add('completed');
+        if (textToSpeechEnabled) {
+          speakText(text);
+        }
+        const imageCategories = ['hindi-vowels', 'capital-alphabets', 'small-alphabets', 'fruits', 'vegetables', 'body-parts'];
+        if (imageCategories.includes(currentCategory) && image) {
+          showImageOverlay(image, text);
+        }
+        checkCompletion();
+      }
+    }
+
+    function showImageOverlay(imageSrc, altText) {
+      const overlay = document.getElementById('image-overlay');
+      const img = document.getElementById('overlay-image');
+      img.src = imageSrc;
+      img.alt = altText;
+      img.onerror = () => {
+        alert(`Image for "${altText}" could not be loaded.`);
+        closeImageOverlay();
+      };
+      overlay.style.display = 'flex';
+    }
+
+    function closeImageOverlay() {
+      const overlay = document.getElementById('image-overlay');
+      overlay.style.display = 'none';
+    }
+
+    function speakText(text, lang) {
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang || (currentCategory === 'hindi-vowels' ? 'hi-IN' : 'en-US');
+        utterance.pitch = 1.2;
+        utterance.rate = 1;
+        const voices = speechSynthesis.getVoices();
+        const targetVoice = voices.find(voice => voice.lang === utterance.lang);
+        if (targetVoice) {
+          utterance.voice = targetVoice;
+          speechSynthesis.speak(utterance);
+        } else {
+          console.warn(`${utterance.lang === 'hi-IN' ? 'Hindi' : 'English'} voice not available.`);
+        }
+      } else {
+        console.warn('Text-to-speech is not supported on this device.');
+      }
+    }
+
+    function checkCompletion() {
+      const displayedItems = Math.min(8, currentContent.length - currentIndex);
+      let allCompleted = true;
+      for (let i = currentIndex; i < currentIndex + displayedItems; i++) {
+        if (!completedItems.has(`${currentCategory}-${i}`)) {
+          allCompleted = false;
+          break;
+        }
+      }
+      if (allCompleted && currentIndex + 8 < currentContent.length) {
+        currentIndex += 8;
+        renderContent();
+      }
+    }
+
+    function showMathOperation() {
+      showScreen('math-operation-screen');
+      const content = document.getElementById('math-operation-content');
+      content.innerHTML = '';
+      const operation = mathOperations[currentIndex % mathOperations.length];
+      const div = document.createElement('div');
+      div.className = 'math-operation';
+      const operationText = `${operation.num1} ${operation.op} ${operation.num2} = ${operation.answer}`;
+      div.textContent = operationText;
+      div.onclick = () => handleContentClick(0, operationText, null);
+      content.appendChild(div);
+    }
+
+    function showWriteContent(category, content) {
+      currentCategory = category;
+      currentContent = content;
+      currentIndex = 0;
+      showScreen('write-screen');
+      renderWriteContent();
+      initCanvas('draw-canvas', 'color-picker');
+    }
+
+    function showMathWrite() {
+      currentCategory = 'math-write';
+      currentIndex = 0;
+      showScreen('math-write-screen');
+      renderMathWriteContent();
+      initCanvas('math-draw-canvas', 'math-color-picker');
+    }
+
+    function fitTextOnCanvas(ctx, text, canvasWidth, canvasHeight, fontFamily) {
+      let fontSize = 100;
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      let metrics = ctx.measureText(text);
+      let textWidth = metrics.width;
+      let textHeight = fontSize;
+      const padding = 20;
+      const maxWidth = canvasWidth - 2 * padding;
+      const maxHeight = canvasHeight - 2 * padding;
+
+      while ((textWidth > maxWidth || textHeight > maxHeight) && fontSize > 10) {
+        fontSize -= 5;
+        ctx.font = `${fontSize}px ${fontFamily}`;
+        metrics = ctx.measureText(text);
+        textWidth = metrics.width;
+        textHeight = fontSize;
+      }
+
+      const x = (canvasWidth - textWidth) / 2;
+      const y = (canvasHeight + fontSize / 2) / 2;
+      return { x, y, fontSize };
+    }
+
+    function renderWriteContent() {
+      const textDiv = document.getElementById('write-text');
+      const text = currentContent[currentIndex].text;
+      textDiv.textContent = text;
+      const canvas = document.getElementById('draw-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#0288d1';
+      const fontFamily = currentCategory.includes('hindi') ? '"Noto Serif Devanagari", "Comic Neue", cursive' : '"Comic Neue", cursive';
+      const { x, y, fontSize } = fitTextOnCanvas(ctx, text, canvas.width, canvas.height, fontFamily);
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.fillText(text, x, y);
+      ctx.restore();
+    }
+
+    function renderMathWriteContent() {
+      const textDiv = document.getElementById('math-write-text');
+      const operation = mathOperations[currentIndex % mathOperations.length];
+      const displayText = `${operation.num1} ${'<span class="stick">|</span>'.repeat(operation.num1)} ${operation.op} ${operation.num2} ${'<span class="stick">|</span>'.repeat(operation.num2)}`;
+      textDiv.innerHTML = displayText;
+      const canvas = document.getElementById('math-draw-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.save();
+      ctx.globalAlpha = 0.3;
+      ctx.fillStyle = '#0288d1';
+      const canvasText = `${operation.num1} ${operation.op} ${operation.num2}`;
+      const fontFamily = '"Comic Neue", cursive';
+      const { x, y, fontSize } = fitTextOnCanvas(ctx, canvasText, canvas.width, canvas.height, fontFamily);
+      ctx.font = `${fontSize}px ${fontFamily}`;
+      ctx.fillText(canvasText, x, y);
+      ctx.restore();
+    }
+
+    let isDrawing = false;
+    let strokeWidth = 3;
+    let strokeColor = '#000000';
+    let lastX, lastY;
+
+    function initCanvas(canvasId, colorPickerId) {
+      const canvas = document.getElementById(canvasId);
+      canvas.width = window.innerWidth * 0.7;
+      canvas.height = window.innerHeight * 0.6 * 0.7;
+      const ctx = canvas.getContext('2d');
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = strokeWidth;
+
+      canvas.removeEventListener('touchstart', handleTouchStart);
+      canvas.removeEventListener('touchmove', handleTouchMove);
+      canvas.removeEventListener('touchend', handleTouchEnd);
+
+      canvas.addEventListener('touchstart', handleTouchStart);
+      canvas.addEventListener('touchmove', handleTouchMove);
+      canvas.addEventListener('touchend', handleTouchEnd);
+
+      function handleTouchStart(e) {
+        e.preventDefault();
+        isDrawing = true;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        lastX = touch.clientX - rect.left;
+        lastY = touch.clientY - rect.top;
+      }
+
+      function handleTouchMove(e) {
+        e.preventDefault();
+        if (!isDrawing) return;
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(lastX, lastY);
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = strokeColor;
+        ctx.lineWidth = strokeWidth;
+        ctx.stroke();
+        lastX = x;
+        lastY = y;
+      }
+
+      function handleTouchEnd(e) {
+        e.preventDefault();
+        isDrawing = false;
+      }
+
+      const colorPicker = document.getElementById(colorPickerId);
+      colorPicker.value = strokeColor;
+    }
+
+    function clearCanvas(canvasId) {
+      const canvas = document.getElementById(canvasId);
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (canvasId === 'draw-canvas') {
+        renderWriteContent();
+      } else {
+        renderMathWriteContent();
+      }
+    }
+
+    function setStrokeWidth(width) {
+      strokeWidth = width;
+      const canvas = document.getElementById(currentCategory === 'math-write' ? 'math-draw-canvas' : 'draw-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.lineWidth = strokeWidth;
+    }
+
+    function setStrokeColor(color) {
+      strokeColor = color;
+      const canvas = document.getElementById(currentCategory === 'math-write' ? 'math-draw-canvas' : 'draw-canvas');
+      const ctx = canvas.getContext('2d');
+      ctx.strokeStyle = strokeColor;
+    }
+
+    function submitDrawing() {
+      completedItems.add(`${currentCategory}-${currentIndex}`);
+      currentIndex++;
+      if (currentCategory === 'math-write') {
+        if (currentIndex < mathOperations.length) {
+          renderMathWriteContent();
+          initCanvas('math-draw-canvas', 'math-color-picker');
+        } else {
+          showScreen('write-options');
+        }
+      } else {
+        if (currentIndex < currentContent.length) {
+          renderWriteContent();
+          initCanvas('draw-canvas', 'color-picker');
+        } else {
+          showScreen('write-options');
+        }
+      }
+    }
+
+    function showPreviousScreen() {
+      if (currentCategory === 'hindi-vowels') {
+        showScreen('hindi-options');
+      } else if (currentCategory.startsWith('english')) {
+        showScreen('english-options');
+      } else if (currentCategory.startsWith('math') || currentCategory === 'numbers') {
+        showScreen('math-options');
+      } else {
+        showScreen('learn-options');
+      }
+    }
+
+    function referFriend() {
+      alert('Refer a friend feature coming soon!');
+    }
+
+    function updateFlyingText() {
+      document.querySelectorAll('.flying-text').forEach(el => el.remove());
+      if (currentCategory && currentContent.length) {
+        const words = currentContent.map(item => item.text);
+        for (let i = 0; i < 10; i++) {
+          const div = document.createElement('div');
+          div.className = 'flying-text';
+          div.textContent = words[Math.floor(Math.random() * words.length)];
+          div.style.left = `${Math.random() * 100}vw`;
+          div.style.top = `${Math.random() * 100}vh`;
+          div.style.animation = `float${i % 3} ${5 + Math.random() * 5}s infinite`;
+          document.body.appendChild(div);
+        }
+      }
+    }
+
+    window.onload = function() {
+      backgroundAudio.loop = true;
+      if (backgroundSoundEnabled) {
+        backgroundAudio.play().catch(() => {});
+      }
+      updateFlyingText();
+      // Ensure voices are loaded before speaking
+      speechSynthesis.onvoiceschanged = () => {
+        speechSynthesis.getVoices();
+      };
+    };
+</script>
+</body>
+</html>

@@ -1,0 +1,181 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>All In One Games</title>
+  <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    body, html {
+      margin: 0;
+      padding: 0;
+      font-family: 'Comic Neue', cursive;
+      height: 100%;
+      overflow-x: hidden;
+      background: url('bg.jpg') no-repeat center center / cover;
+      touch-action: manipulation;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .games-container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 20px;
+      padding: 20px;
+      width: 100%;
+      max-width: 600px;
+      z-index: 2; /* Ensure buttons are above falling text */
+    }
+
+    .button {
+      padding: 15px 30px;
+      font-size: 20px;
+      color: #fff;
+      border: 3px solid #ffffff;
+      border-radius: 15px;
+      cursor: pointer;
+      text-align: center;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      transition: transform 0.2s, box-shadow 0.2s;
+      font-weight: 700;
+      width: 100%;
+      max-width: 300px;
+      z-index: 2; /* Ensure buttons are above falling text */
+    }
+
+    .button:active {
+      transform: scale(0.95);
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Assign unique colors to each game button */
+    .button:nth-child(1) { background-color: #ff6347; } /* Crossy Road */
+    .button:nth-child(2) { background-color: #4682b4; } /* Flappy Bird */
+    .button:nth-child(3) { background-color: #32cd32; } /* Quiz Game */
+    .button:nth-child(4) { background-color: #ff69b4; } /* Snake Game */
+    .button:nth-child(5) { background-color: #6a5acd; } /* Tetris */
+    .button:nth-child(6) { background-color: #ff4500; } /* Tic Tac Toe */
+    .button:nth-child(7) { background-color: #20b2aa; } /* Tilting Maze */
+    .button:nth-child(8) { background-color: #9932cc; } /* Tower Blocks */
+    .button:nth-child(9) { background-color: #228b22; } /* Breakout */
+    .button:nth-child(10) { background-color: #ff4500; } /* Back */
+
+    .flying-text {
+      position: absolute;
+      font-family: 'Comic Neue', cursive;
+      font-size: 20px;
+      color: rgba(144, 202, 249, 0.3);
+      pointer-events: none;
+      white-space: nowrap;
+      z-index: 0; /* Ensure falling text is behind buttons */
+      animation: fall 8s linear infinite;
+      opacity: 0;
+    }
+
+    @keyframes fall {
+      0% {
+        transform: translateY(-100vh);
+        opacity: 0.3;
+      }
+      10% {
+        opacity: 0.5;
+      }
+      90% {
+        opacity: 0.5;
+      }
+      100% {
+        transform: translateY(100vh);
+        opacity: 0;
+      }
+    }
+
+    h1 {
+      font-size: 36px;
+      color: #fff;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      margin-bottom: 20px;
+      z-index: 2; /* Ensure title is above falling text */
+    }
+  </style>
+</head>
+<body>
+  <h1>🎮 All In One Games 🎮</h1>
+  <div class="games-container">
+    <button class="button" onclick="window.location.href='Crossy-Road-Game/index.html'">Crossy Road</button>
+    <button class="button" onclick="window.location.href='Flappy-Bird-Game/index.html'">Flappy Bird</button>
+    <button class="button" onclick="window.location.href='Quiz-Game/index.html'">Quiz Game</button>
+    <button class="button" onclick="window.location.href='Snake-Game/index.html'">Snake Game</button>
+    <button class="button" onclick="window.location.href='Tetris-Game/index.html'">Tetris</button>
+    <button class="button" onclick="window.location.href='Tic-Tac-Toe/index.html'">Tic Tac Toe</button>
+    <button class="button" onclick="window.location.href='Tilting-Maze-Game/index.html'">Tilting Maze</button>
+    <button class="button" onclick="window.location.href='Tower-Blocks/index.html'">Tower Blocks</button>
+    <button class="button" onclick="window.location.href='Breakout/index.html'">Breakout</button>
+    <button class="button" onclick="window.location.href='index.html'">⬅ Back</button>
+  </div>
+
+  <script>
+    const games = [
+      'Crossy Road', 'Flappy Bird', 'Quiz Game', 'Snake Game',
+      'Tetris', 'Tic Tac Toe', 'Tilting Maze', 'Tower Blocks', 'Breakout'
+    ];
+
+    function updateFlyingText() {
+      document.querySelectorAll('.flying-text').forEach(el => el.remove());
+      for (let i = 0; i < 10; i++) {
+        const div = document.createElement('div');
+        div.className = 'flying-text';
+        div.textContent = games[Math.floor(Math.random() * games.length)];
+        div.style.left = `${Math.random() * 100}vw`;
+        div.style.animationDelay = `${Math.random() * 8}s`;
+        document.body.appendChild(div);
+      }
+    }
+
+    window.onload = updateFlyingText;
+  </script>
+</body>
+</html>

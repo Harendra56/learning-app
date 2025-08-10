@@ -1,0 +1,540 @@
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Educational App - Words</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone"></script>
+    <style>
+        body {
+            background-image: url('bg.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            background-attachment: fixed;
+        }
+        @keyframes shimmer {
+            0% { background-position: 0% 50%; }
+            100% { background-position: 200% 50%; }
+        }
+        @keyframes popupFadeIn {
+            from { opacity: 0; transform: scale(0.5); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes popupFadeOut {
+            from { opacity: 1; transform: scale(1); }
+            to { opacity: 0; transform: scale(0.5); }
+        }
+        @keyframes zoomInOut {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+            100% { transform: scale(1); }
+        }
+        .popup-animate-in {
+            animation: popupFadeIn 0.5s ease-out forwards;
+        }
+        .popup-animate-out {
+            animation: popupFadeOut 0.5s ease-out forwards;
+        }
+        .zoom-title {
+            animation: zoomInOut 2s ease-in-out infinite;
+            text-align: center;
+            text-shadow: 0 0 48px rgba(255, 255, 255, 0.95), 0 0 72px rgba(255, 255, 255, 0.75);
+        }
+        #draw-container {
+            position: relative;
+            z-index: 5;
+            border: 4px solid;
+            border-image: linear-gradient(to right, #ff6b6b, #4ecdc4) 1;
+            background: #ffffff;
+            border-radius: 15px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        }
+        #draw-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: transparent;
+            z-index: 15;
+            touch-action: none;
+            width: 100%;
+            height: 100%;
+        }
+        #draw-text {
+            position: absolute;
+            z-index: 10;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #d1d5db;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.8), 0 0 20px rgba(0, 255, 0, 0.6);
+            font-family: 'Comic Sans MS', 'Chalkboard', sans-serif;
+        }
+        .colorful-button {
+            position: relative;
+            transition: all 0.3s ease;
+            border-radius: 12px;
+            border: 2px solid white;
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3), inset 0 -2px 5px rgba(0, 0, 0, 0.2), inset 0 2px 5px rgba(255, 255, 255, 0.3);
+            overflow: hidden;
+            transform: translateZ(0);
+        }
+        .colorful-button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
+            transition: left 0.5s;
+        }
+        .colorful-button:hover {
+            transform: translateY(-2px) scale(1.05);
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4), inset 0 -2px 5px rgba(0, 0, 0, 0.2), inset 0 2px 5px rgba(255, 255, 255, 0.3);
+        }
+        .colorful-button:hover::before {
+            left: 100%;
+        }
+        .colorful-button:active {
+            transform: translateY(2px);
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.2), inset 0 -2px 5px rgba(0, 0, 0, 0.3), inset 0 2px 5px rgba(255, 255, 255, 0.2);
+        }
+        .stroke-text {
+            color: white;
+            -webkit-text-stroke: 2px #4f46e5;
+            text-shadow: 2px 2px 0 #4f46e5;
+        }
+        #bg-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+        #particle-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body class="font-sans">
+    <canvas id="bg-canvas"></canvas>
+    <canvas id="particle-canvas"></canvas>
+    <div id="root"></div>
+
+    <script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+            return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+            if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+                try {
+                    var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                    var firstSheetName = workbook.SheetNames[0];
+                    var worksheet = workbook.Sheets[firstSheetName];
+                    var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                    var filteredData = jsonData.filter(row => row.some(filledCell));
+                    var headerRowIndex = filteredData.findIndex((row, index) =>
+                        row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                    );
+                    if (headerRowIndex === -1 || headerRowIndex > 25) {
+                        headerRowIndex = 0;
+                    }
+                    var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex));
+                    csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                    return csv;
+                } catch (e) {
+                    console.error(e);
+                    return "";
+                }
+            }
+            return gk_fileData[filename] || "";
+        }
+    </script>
+
+    <script type="text/javascript">
+        const bgCanvas = document.getElementById('bg-canvas');
+        const bgCtx = bgCanvas.getContext('2d');
+        bgCanvas.width = window.innerWidth;
+        bgCanvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            bgCanvas.width = window.innerWidth;
+            bgCanvas.height = window.innerHeight;
+        });
+
+        const textArray = ['A', 'B', 'C', '1', '2', '3', '★', '●', '■'];
+        const fallingText = [];
+        class FallingLetter {
+            constructor() {
+                this.x = Math.random() * bgCanvas.width;
+                this.y = Math.random() * -bgCanvas.height;
+                this.text = textArray[Math.floor(Math.random() * textArray.length)];
+                this.speed = Math.random() * 2 + 1;
+                this.opacity = Math.random() * 0.5 + 0.3;
+            }
+            update() {
+                this.y += this.speed;
+                if (this.y > bgCanvas.height) {
+                    this.y = -20;
+                    this.x = Math.random() * bgCanvas.width;
+                }
+            }
+            draw() {
+                bgCtx.font = '20px Comic Sans MS';
+                bgCtx.fillStyle = `rgba(255, 255, 255, ${this.opacity})`;
+                bgCtx.fillText(this.text, this.x, this.y);
+            }
+        }
+
+        for (let i = 0; i < 50; i++) {
+            fallingText.push(new FallingLetter());
+        }
+
+        function animateBackground() {
+            bgCtx.clearRect(0, 0, bgCanvas.width, bgCanvas.height);
+            fallingText.forEach(letter => {
+                letter.update();
+                letter.draw();
+            });
+            requestAnimationFrame(animateBackground);
+        }
+
+        animateBackground();
+
+        const particleCanvas = document.getElementById('particle-canvas');
+        const pCtx = particleCanvas.getContext('2d');
+        particleCanvas.width = window.innerWidth;
+        particleCanvas.height = window.innerHeight;
+
+        window.addEventListener('resize', () => {
+            particleCanvas.width = window.innerWidth;
+            particleCanvas.height = window.innerHeight;
+        });
+
+        const particlesArray = [];
+
+        class ConfettiParticle {
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.size = Math.random() * 8 + 4;
+                this.speedX = Math.random() * 10 - 5;
+                this.speedY = Math.random() * 10 - 5;
+                this.color = ['rgba(255, 99, 132, 0.7)', 'rgba(54, 162, 235, 0.7)', 'rgba(255, 206, 86, 0.7)', 'rgba(75, 192, 192, 0.7)', 'rgba(153, 102, 255, 0.7)'][Math.floor(Math.random() * 5)];
+                this.shape = ['circle', 'star', 'square'][Math.floor(Math.random() * 3)];
+                this.life = 120;
+                this.rotation = Math.random() * Math.PI * 2;
+                this.rotationSpeed = Math.random() * 0.1 - 0.05;
+            }
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                this.size *= 0.98;
+                this.life--;
+                this.rotation += this.rotationSpeed;
+            }
+            draw() {
+                pCtx.save();
+                pCtx.translate(this.x, this.y);
+                pCtx.rotate(this.rotation);
+                pCtx.fillStyle = this.color;
+                if (this.shape === 'circle') {
+                    pCtx.beginPath();
+                    pCtx.arc(0, 0, this.size, 0, Math.PI * 2);
+                    pCtx.fill();
+                } else if (this.shape === 'square') {
+                    pCtx.fillRect(-this.size, -this.size, this.size * 2, this.size * 2);
+                } else if (this.shape === 'star') {
+                    pCtx.beginPath();
+                    for (let i = 0; i < 5; i++) {
+                        pCtx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * this.size,
+                                    -Math.sin((18 + i * 72) / 180 * Math.PI) * this.size);
+                        pCtx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * (this.size / 2),
+                                    -Math.sin((54 + i * 72) / 180 * Math.PI) * (this.size / 2));
+                    }
+                    pCtx.closePath();
+                    pCtx.fill();
+                }
+                pCtx.restore();
+            }
+        }
+
+        function triggerParticles(x, y, count = 50) {
+            for (let i = 0; i < count; i++) {
+                particlesArray.push(new ConfettiParticle(x, y));
+            }
+        }
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, particleCanvas.width, particleCanvas.height);
+            for (let i = particlesArray.length - 1; i >= 0; i--) {
+                particlesArray[i].update();
+                particlesArray[i].draw();
+                if (particlesArray[i].life <= 0 || particlesArray[i].size < 0.1) {
+                    particlesArray.splice(i, 1);
+                }
+            }
+            requestAnimationFrame(animateParticles);
+        }
+
+        animateParticles();
+    </script>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { createRoot } = ReactDOM;
+
+        const data = {
+            'hindi-words': [
+                'पेड़', 'नदी', 'सूरज', 'चाँद', 'घर', 'पुस्तक', 'कलम', 'फूल', 'पक्षी', 'हाथी',
+'शेर', 'मछली', 'वृक्ष', 'आकाश', 'पहाड़', 'सड़क', 'दरवाजा', 'खिड़की', 'मेज', 'कुर्सी',
+'सेब', 'केला', 'संतरा', 'अंगूर', 'आम', 'नमक', 'चीनी', 'पानी', 'दूध', 'रोटी',
+'चावल', 'दाल', 'सब्जी', 'फल', 'बादल', 'तारा', 'हवा', 'बारिश', 'धूप', 'छाया',
+'पत्ती', 'जंगल', 'नाव', 'पुल', 'खेत', 'बाग', 'पशु', 'कीड़ा', 'मकड़ी', 'चिड़िया',
+'घड़ी', 'किताब', 'कागज़', 'पेंसिल', 'खेल', 'गेंद', 'बच्चा', 'बिल्ली', 'कुत्ता', 'गाय',
+'भालू', 'भौंरा', 'तितली', 'घोड़ा', 'ऊँट', 'लोमड़ी', 'साँप', 'बकरी', 'मुर्गा', 'मुर्गी',
+'थाली', 'कटोरी', 'चम्मच', 'गिलास', 'कप', 'कढ़ाई', 'भोजन', 'नाश्ता', 'खाना', 'जल',
+'सप्ताह', 'सोमवार', 'मंगलवार', 'बुधवार', 'गुरुवार', 'शुक्रवार', 'शनिवार', 'रविवार', 'दिन', 'रात',
+'सुबह', 'शाम', 'दोपहर', 'समय', 'मिनट', 'घंटा', 'साल', 'महीना', 'तारीख', 'घड़ी',
+'बिल्डिंग', 'कमरा', 'छत', 'फर्श', 'दीवार', 'सीढ़ी', 'आंगन', 'पंखा', 'बत्ती', 'ताला',
+'कंघी', 'आईना', 'साबुन', 'बाल्टी', 'तौलिया', 'कपड़े', 'जूता', 'चप्पल', 'टोपी', 'कमीज़',
+'पैंट', 'साड़ी', 'बटन', 'सुई', 'धागा', 'बैग', 'बक्सा', 'तकिया', 'चादर', 'गद्दा',
+'खिड़की', 'दरवाजा', 'झूला', 'कुर्सी', 'सोफा', 'टेबल', 'रेफ्रिजरेटर', 'टीवी', 'मोबाइल', 'कंप्यूटर',
+'कुंजी', 'ड्राइवर', 'गाड़ी', 'बस', 'ट्रेन', 'हवाईजहाज', 'साइकिल', 'स्कूटर', 'टायर', 'इंजन',
+'सड़क', 'मार्ग', 'चौराहा', 'लाइट', 'संकेत', 'पुलिस', 'चिकित्सक', 'अस्पताल', 'दवा', 'चिकित्सा',
+'स्कूल', 'अध्यापक', 'विद्यार्थी', 'परीक्षा', 'अध्ययन', 'होमवर्क', 'पढ़ाई', 'लेखन', 'गणित', 'कविता',
+'कहानी', 'निबंध', 'चित्र', 'कला', 'संगीत', 'नृत्य', 'खेल', 'मैदान', 'गोल', 'टीम',
+'जीत', 'हार', 'प्रशंसा', 'इनाम', 'सजा', 'कृपा', 'प्रेम', 'मित्र', 'शत्रु', 'सपना',
+'सच', 'झूठ', 'अच्छा', 'बुरा', 'साफ', 'गंदा', 'मीठा', 'कड़वा', 'नया', 'पुराना',
+'खुश', 'दुखी', 'हँसी', 'रोना', 'आशा', 'डर', 'गुस्सा', 'शांति', 'धैर्य', 'श्रद्धा',
+'भरोसा', 'इच्छा', 'सपना', 'मकसद', 'उद्देश्य', 'प्रयास', 'सफलता', 'असफलता', 'परिश्रम', 'ईमानदारी'
+
+            ],
+            'english-words': [
+                'APPLE', 'BALL', 'CAT', 'DOG', 'EGG', 'FISH', 'GOAT', 'HAT', 'ICE', 'JUG',
+'KITE', 'LION', 'MANGO', 'NEST', 'ORANGE', 'PEN', 'QUEEN', 'RAT', 'SUN', 'TOP',
+'UMBRELLA', 'VAN', 'WOLF', 'X-RAY', 'YAK', 'ZEBRA', 'BOOK', 'CHAIR', 'TABLE', 'BED',
+'WATER', 'MILK', 'TEA', 'RICE', 'BREAD', 'BUTTER', 'HONEY', 'SALT', 'SUGAR', 'JUICE',
+'RED', 'BLUE', 'GREEN', 'YELLOW', 'PINK', 'BLACK', 'WHITE', 'ORANGE', 'BROWN', 'PURPLE',
+'ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'TEN',
+'ELEVEN', 'TWELVE', 'THIRTEEN', 'FOURTEEN', 'FIFTEEN', 'SIXTEEN', 'SEVENTEEN', 'EIGHTEEN', 'NINETEEN', 'TWENTY',
+'BOY', 'GIRL', 'MAN', 'WOMAN', 'BABY', 'FATHER', 'MOTHER', 'BROTHER', 'SISTER', 'FRIEND',
+'SCHOOL', 'TEACHER', 'STUDENT', 'BOOK', 'BAG', 'PENCIL', 'ERASER', 'SHARPENER', 'RULER', 'NOTEBOOK',
+'DESK', 'BENCH', 'BLACKBOARD', 'CHALK', 'PEN', 'MARKER', 'BOARD', 'BELL', 'CLOCK', 'MAP',
+'SUN', 'MOON', 'STAR', 'SKY', 'CLOUD', 'RAIN', 'WIND', 'SNOW', 'STORM', 'FOG',
+'TREE', 'LEAF', 'FLOWER', 'GRASS', 'FRUIT', 'ROOT', 'BRANCH', 'PLANT', 'SEED', 'SOIL',
+'COW', 'DOG', 'CAT', 'SHEEP', 'GOAT', 'HORSE', 'HEN', 'DUCK', 'PIG', 'RABBIT',
+'ELEPHANT', 'LION', 'TIGER', 'BEAR', 'MONKEY', 'FOX', 'WOLF', 'DEER', 'ZEBRA', 'GIRAFFE',
+'FISH', 'FROG', 'SNAKE', 'TURTLE', 'INSECT', 'BEE', 'ANT', 'BUTTERFLY', 'SPIDER', 'WORM',
+'HOUSE', 'DOOR', 'WINDOW', 'ROOF', 'WALL', 'FLOOR', 'ROOM', 'FAN', 'LIGHT', 'BULB',
+'KITCHEN', 'BATHROOM', 'BEDROOM', 'LIVINGROOM', 'TABLE', 'CHAIR', 'SOFA', 'TV', 'FRIDGE', 'OVEN',
+'CUP', 'PLATE', 'GLASS', 'SPOON', 'FORK', 'KNIFE', 'BOWL', 'PAN', 'POT', 'JUG',
+'SHIRT', 'PANT', 'DRESS', 'COAT', 'HAT', 'CAP', 'SHOE', 'SOCK', 'SCARF', 'BELT',
+'CAR', 'BUS', 'TRAIN', 'TRUCK', 'BIKE', 'CYCLE', 'SCOOTER', 'BOAT', 'SHIP', 'PLANE',
+'ROAD', 'BRIDGE', 'PATH', 'STREET', 'LANE', 'CORNER', 'TRAFFIC', 'SIGNAL', 'POLICE', 'AMBULANCE',
+'YES', 'NO', 'GOOD', 'BAD', 'HAPPY', 'SAD', 'BIG', 'SMALL', 'HOT', 'COLD',
+'FAST', 'SLOW', 'CLEAN', 'DIRTY', 'SOFT', 'HARD', 'OPEN', 'CLOSE', 'UP', 'DOWN',
+'NEAR', 'FAR', 'IN', 'OUT', 'ON', 'OFF', 'RIGHT', 'LEFT', 'FRONT', 'BACK',
+'LAUGH', 'CRY', 'PLAY', 'JUMP', 'RUN', 'WALK', 'SIT', 'STAND', 'CLAP', 'DANCE',
+'WRITE', 'READ', 'DRAW', 'SING', 'TALK', 'LISTEN', 'WATCH', 'LOOK', 'TOUCH', 'FEEL',
+'LOVE', 'HATE', 'LIKE', 'WANT', 'NEED', 'HELP', 'TRY', 'WORK', 'REST', 'SLEEP',
+'MORNING', 'AFTERNOON', 'EVENING', 'NIGHT', 'DAY', 'WEEK', 'MONTH', 'YEAR', 'TODAY', 'TOMORROW',
+'YESTERDAY', 'TIME', 'MINUTE', 'HOUR', 'CLOCK', 'CALENDAR', 'HOLIDAY', 'BIRTHDAY', 'FESTIVAL', 'PARTY'
+
+            ]
+        };
+
+        function App() {
+            const [screen, setScreen] = useState('learn-hindi-words');
+            const [currentCategory, setCurrentCategory] = useState('hindi-words');
+            const [currentBatch, setCurrentBatch] = useState(0);
+            const [completedItems, setCompletedItems] = useState(new Set());
+
+            useEffect(() => {
+                const hash = window.location.hash.replace('#', '');
+                if (hash === 'english-words') {
+                    setScreen('learn-category');
+                    setCurrentCategory('english-words');
+                    setCurrentBatch(0);
+                    setCompletedItems(new Set());
+                }
+            }, []);
+
+            const referFriend = () => alert('Invite your friends to join the app!');
+
+            const showScreen = (screenId) => setScreen(screenId);
+
+            const showLearnCategory = (category) => {
+                setCurrentCategory(category);
+                setCurrentBatch(0);
+                setCompletedItems(new Set());
+                setScreen('learn-category');
+            };
+
+            const goBackFromLearnCategory = () => {
+                if (['hindi-words'].includes(currentCategory)) {
+                    window.location.href = 'index.html#hindi-options';
+                } else if (['english-words'].includes(currentCategory)) {
+                    window.location.href = 'index.html#english-options';
+                } else {
+                    setScreen('home');
+                }
+            };
+
+            const speakText = (text) => {
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = currentCategory.includes('hindi') ? 'hi-IN' : 'en-US';
+                window.speechSynthesis.speak(utterance);
+            };
+
+            const handleItemClick = (item, event) => {
+                const rect = event.currentTarget.getBoundingClientRect();
+                const x = rect.left + rect.width / 2;
+                const y = rect.top + rect.height / 2;
+                triggerParticles(x, y);
+                speakText(item);
+
+                const newCompletedItems = new Set(completedItems);
+                newCompletedItems.add(item);
+                setCompletedItems(newCompletedItems);
+                const currentItems = data[currentCategory].slice(currentBatch * 8, (currentBatch + 1) * 8);
+                if (currentItems.every(i => newCompletedItems.has(i))) {
+                    const totalItems = data[currentCategory].length;
+                    const nextBatch = currentBatch + 1;
+                    if (nextBatch * 8 < totalItems) {
+                        setCurrentBatch(nextBatch);
+                    } else {
+                        setCurrentBatch(0);
+                        setCompletedItems(new Set());
+                    }
+                }
+            };
+
+            return (
+                <div className="min-h-screen flex flex-col">
+                    {screen === 'home' && (
+                        <div className="flex flex-col items-center justify-center h-screen">
+                            <h1 className="text-5xl font-bold mb-8 drop-shadow-lg text-indigo-700 font-['Comic Sans MS'] zoom-title text-center">Educational App - Words</h1>
+                            <button onClick={() => showLearnCategory('hindi-words')} className="bg-gradient-to-r from-red-400 to-red-600 text-white px-10 py-5 rounded-2xl mb-4 text-2xl font-semibold colorful-button">Hindi Words</button>
+                            <button onClick={() => showLearnCategory('english-words')} className="bg-gradient-to-r from-blue-400 to-blue-600 text-white px-10 py-5 rounded-2xl mb-4 text-2xl font-semibold colorful-button">English Words</button>
+                            <button onClick={() => window.location.href = 'index.html'} className="bg-gradient-to-r from-gray-600 to-gray-800 text-white px-10 py-5 rounded-2xl text-2xl font-semibold colorful-button">Back to Main</button>
+                        </div>
+                    )}
+
+                    {screen === 'learn-hindi-words' && (
+                        <div className="flex flex-col p-6 min-h-screen" style={{ backgroundImage: "url('learn-bg.jpg')", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundAttachment: "fixed" }}>
+                            <h2 className="text-4xl font-bold mb-6 text-indigo-700 font-['Comic Sans MS'] zoom-title text-center">HINDI WORDS</h2>
+                            <div className="grid grid-cols-2 gap-4 flex-grow">
+                                {data['hindi-words'].slice(currentBatch * 8, (currentBatch + 1) * 8).map((item, index) => (
+                                    <button
+                                        key={`${item}-${currentBatch}`}
+                                        onClick={(e) => handleItemClick(item, e)}
+                                        className={`p-6 rounded-2xl text-xl font-semibold shadow-lg colorful-button popup-animate-in ${
+                                            completedItems.has(item)
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white'
+                                                : index % 4 === 0 ? 'bg-gradient-to-r from-pink-400 to-pink-600 text-white' :
+                                                  index % 4 === 1 ? 'bg-gradient-to-r from-indigo-400 to-indigo-600 text-white' :
+                                                  index % 4 === 2 ? 'bg-gradient-to-r from-teal-400 to-teal-600 text-white' :
+                                                  'bg-gradient-to-r from-violet-400 to-violet-600 text-white'
+                                        }`}
+                                    >
+                                        {item}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex justify-between mt-6">
+                                <button onClick={goBackFromLearnCategory} className="bg-gradient-to-r from-gray-600 to-gray-800 text-white px-6 py-3 rounded-xl font-semibold colorful-button">Back</button>
+                                <button onClick={referFriend} className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold colorful-button">Refer to Friend</button>
+                            </div>
+                        </div>
+                    )}
+
+                    {screen === 'learn-category' && (
+                        <div className="flex flex-col p-6 min-h-screen" style={{ backgroundImage: "url('learn-bg.jpg')", backgroundSize: "cover", backgroundRepeat: "no-repeat", backgroundAttachment: "fixed" }}>
+                            <h2 className="text-4xl font-bold mb-6 text-indigo-700 font-['Comic Sans MS'] zoom-title text-center">{currentCategory.replace('-', ' ').toUpperCase()}</h2>
+                            <div className="grid grid-cols-2 gap-4 flex-grow">
+                                {data[currentCategory]?.slice(currentBatch * 8, (currentBatch + 1) * 8).map((item, index) => (
+                                    <button
+                                        key={`${item}-${currentBatch}`}
+                                        onClick={(e) => handleItemClick(item, e)}
+                                        className={`p-6 rounded-2xl text-xl font-semibold shadow-lg colorful-button popup-animate-in ${
+                                            completedItems.has(item)
+                                                ? 'bg-gradient-to-r from-emerald-500 to-emerald-700 text-white'
+                                                : index % 4 === 0 ? 'bg-gradient-to-r from-pink-400 to-pink-600 text-white' :
+                                                  index % 4 === 1 ? 'bg-gradient-to-r from-indigo-400 to-indigo-600 text-white' :
+                                                  index % 4 === 2 ? 'bg-gradient-to-r from-teal-400 to-teal-600 text-white' :
+                                                  'bg-gradient-to-r from-violet-400 to-violet-600 text-white'
+                                        }`}
+                                    >
+                                        {item}
+                                    </button>
+                                ))}
+                            </div>
+                            <div className="flex justify-between mt-6">
+                                <button onClick={goBackFromLearnCategory} className="bg-gradient-to-r from-gray-600 to-gray-800 text-white px-6 py-3 rounded-xl font-semibold colorful-button">Back</button>
+                                <button onClick={referFriend} className="bg-gradient-to-r from-blue-500 to-blue-700 text-white px-6 py-3 rounded-xl font-semibold colorful-button">Refer to Friend</button>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
